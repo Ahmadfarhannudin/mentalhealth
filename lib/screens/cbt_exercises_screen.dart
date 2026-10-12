@@ -32,8 +32,7 @@ class _CbtExercisesScreenState extends State<CbtExercisesScreen> {
           ),
         ],
       ),
-      body: SafeArea(
-        child: Column(
+      body: Column(
           children: [
             // Category Filter
             Container(
@@ -160,7 +159,6 @@ class _CbtExercisesScreenState extends State<CbtExercisesScreen> {
             ),
           ],
         ),
-      ),
     );
   }
 

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text.dart';
@@ -212,37 +213,35 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
     final hasLoggedToday = _entries.any((e) => e.date == _today());
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildGreetingHeader(hasLoggedToday),
+      backgroundColor: AppColors.cream,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildGreetingHeader(hasLoggedToday),
+            const SizedBox(height: 20),
+            if (_entries.isEmpty) ...[
+              _buildEmptyStateCard(),
               const SizedBox(height: 20),
-              if (_entries.isEmpty) ...[
-                _buildEmptyStateCard(),
-                const SizedBox(height: 20),
-              ] else ...[
-                _buildQuickStatsRow(),
-                const SizedBox(height: 20),
-                _buildQuickActionsRow(),
-                const SizedBox(height: 28),
-              ],
-              _buildCheckInCard(showSummary: hasLoggedToday && !_isEditing),
+            ] else ...[
+              _buildQuickStatsRow(),
+              const SizedBox(height: 20),
+              _buildQuickActionsRow(),
               const SizedBox(height: 28),
-              _sectionHeader('Wawasan untukmu', 'Gambaran dari catatanmu sendiri'),
-              const SizedBox(height: 14),
-              _buildLoggingCard(),
-              const SizedBox(height: 14),
-              _buildWeekChartCard(),
-              const SizedBox(height: 14),
-              _buildTriggersCard(),
-              const SizedBox(height: 20),
-              _buildDisclaimer(),
             ],
-          ),
+            _buildCheckInCard(showSummary: hasLoggedToday && !_isEditing),
+            const SizedBox(height: 28),
+            _sectionHeader('Wawasan untukmu', 'Gambaran dari catatanmu sendiri'),
+            const SizedBox(height: 14),
+            _buildForestCard(),
+            const SizedBox(height: 14),
+            _buildWeekChartCard(),
+            const SizedBox(height: 14),
+            _buildTriggersCard(),
+            const SizedBox(height: 20),
+            _buildDisclaimer(),
+          ],
         ),
       ),
     );
@@ -252,13 +251,13 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppColors.sagePale,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.sageLight),
+        border: Border.all(color: AppColors.borderLight),
       ),
       child: Column(
         children: [
-          const AnimatedLeafBadge(size: 64),
+          Icon(Icons.spa_outlined, size: 48, color: AppColors.sage),
           const SizedBox(height: 14),
           const Text(
             'Belum ada catatan',
@@ -294,28 +293,28 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
       children: [
         Expanded(
           child: _quickStatCard(
-            icon: Icons.local_fire_department_rounded,
+            icon: Icons.wb_sunny_rounded,
             label: 'Konsisten',
             value: streak == 0 ? 'Mulai lagi' : '$streak hari',
-            color: AppColors.peach,
+            color: _Nature.sandTint,
           ),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: _quickStatCard(
-            icon: Icons.calendar_month_rounded,
+            icon: Icons.forest_rounded,
             label: 'Bulan ini',
             value: monthCount == 0 ? 'Belum ada' : '$monthCount catatan',
-            color: AppColors.mintLight,
+            color: _Nature.mintTint,
           ),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: _quickStatCard(
-            icon: Icons.trending_up_rounded,
+            icon: Icons.spa_rounded,
             label: 'Rata-rata',
             value: avgMood,
-            color: AppColors.lavenderLight,
+            color: _Nature.lakeTint,
           ),
         ),
       ],
@@ -422,73 +421,130 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
     );
   }
 
-  // ───────────────────────── Greeting ─────────────────────────
+  // ───────────────────────── Greeting (nuansa alam minimalis) ─────────────────────────
 
   Widget _buildGreetingHeader(bool hasLoggedToday) {
-    final name = widget.userName.trim().isEmpty ? 'Teman' : widget.userName.trim();
+    final name = widget.userName.trim().isEmpty
+        ? 'Teman'
+        : widget.userName.trim();
+
     final subtitle = hasLoggedToday
         ? 'Perasaanmu hari ini sudah tercatat. Terima kasih sudah meluangkan waktu untuk dirimu.'
         : 'Luangkan satu menit untuk menyadari apa yang kamu rasakan hari ini.';
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      width: double.infinity,
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.borderLight),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _dateLabel,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    height: 1.4,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.sageDeep,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '$_greeting,',
-                  style: const TextStyle(
-                    fontSize: 14.5,
-                    height: 1.3,
-                    color: AppColors.textBody,
-                  ),
-                ),
-                Text(
-                  name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 25,
-                    height: 1.25,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.5,
-                    color: AppColors.textDark,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    height: 1.5,
-                    color: AppColors.textMuted,
-                  ),
-                ),
-              ],
-            ),
+        color: const Color(0xFFF0F4E9),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: const Color(0xFFC9D9BE),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF5F7D55).withValues(alpha: 0.09),
+            blurRadius: 18,
+            offset: const Offset(0, 5),
           ),
-          const SizedBox(width: 14),
-          const AnimatedLeafBadge(size: 56),
         ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(23),
+        child: Stack(
+          children: [
+            // Ilustrasi bukit hanya di tepi bawah, tidak menimpa konten.
+            const Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 20,
+              child: IgnorePointer(
+                child: CustomPaint(
+                  painter: _GreetingNaturePainter(),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 17, 16, 27),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _dateLabel,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            height: 1.4,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF607D5D),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          '$_greeting,',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            height: 1.3,
+                            color: Color(0xFF62716B),
+                          ),
+                        ),
+                        const SizedBox(height: 1),
+                        Text(
+                          name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 27,
+                            height: 1.2,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.6,
+                            color: Color(0xFF34433D),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          subtitle,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            height: 1.55,
+                            color: Color(0xFF62716B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Container(
+                    width: 52,
+                    height: 52,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFFDCE9D3),
+                      border: Border.all(
+                        color: const Color(0xFF91B185),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Text(
+                      name.isNotEmpty ? name[0].toUpperCase() : 'T',
+                      style: const TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF527452),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -700,6 +756,11 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
                     ],
                   ),
                 ),
+                SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: CustomPaint(painter: _MoodTreePainter(todayEntry.level)),
+                ),
               ],
             ),
             if (todayEntry.tags.isNotEmpty) ...[
@@ -822,56 +883,121 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
 
   // ───────────────────────── Insight cards ─────────────────────────
 
-  Widget _buildLoggingCard() {
+  /// Kalender bulanan berbentuk hutan: tiap hari tercatat menjadi satu pohon.
+  /// Jenis pohon mengikuti mood hari itu. Hari yang belum dicatat tetap berupa tunas.
+  Widget _buildForestCard() {
     final t = _today();
     final daysInMonth = DateTime(t.year, t.month + 1, 0).day;
-    final logged = _monthEntries.map((e) => e.date).toSet().length;
-    final progress = daysInMonth == 0 ? 0.0 : logged / daysInMonth;
+    final offset = DateTime(t.year, t.month, 1).weekday - 1; // Senin = 0
+    final levels = <int, int>{for (final e in _monthEntries) e.date.day: e.level};
+    final logged = levels.length;
+    final rows = ((offset + daysInMonth) / 7).ceil();
+    const weekdayHeads = ['S', 'S', 'R', 'K', 'J', 'S', 'M'];
 
     return _card(
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 68,
-            height: 68,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox.expand(
-                  child: CircularProgressIndicator(
-                    value: progress,
-                    strokeWidth: 7,
-                    strokeCap: StrokeCap.round,
-                    backgroundColor: AppColors.sagePale,
-                    valueColor: const AlwaysStoppedAnimation(AppColors.sage),
+          _cardTitle(Icons.forest_rounded, 'Hutan ${_monthNames[t.month - 1]}'),
+          const SizedBox(height: 12),
+          Text('$logged dari $daysInMonth hari sudah tumbuh',
+              style: const TextStyle(
+                  fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+          const SizedBox(height: 3),
+          Text(
+            _streak > 0
+                ? 'Kamu mencatat $_streak hari berturut-turut.'
+                : 'Mulai lagi kapan pun kamu siap. Tidak ada yang tertinggal.',
+            style: const TextStyle(fontSize: 13, color: AppColors.textMuted, height: 1.4),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              for (final d in weekdayHeads)
+                Expanded(
+                  child: Center(
+                    child: Text(d,
+                        style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textMuted)),
                   ),
                 ),
-                Text('$logged',
-                    style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.sageDeep)),
+            ],
+          ),
+          const SizedBox(height: 6),
+          for (int r = 0; r < rows; r++)
+            Row(
+              children: [
+                for (int c = 0; c < 7; c++)
+                  Expanded(
+                    child: () {
+                      final d = r * 7 + c - offset + 1;
+                      if (d < 1 || d > daysInMonth) return const SizedBox(height: 50);
+                      return _dayCell(d, t, levels);
+                    }(),
+                  ),
               ],
             ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 14,
+            runSpacing: 8,
+            children: [
+              for (final mood in AppConstants.moodOptions)
+                _legendItem(mood['level'] as int, mood['label'] as String),
+              _legendItem(0, 'Belum dicatat'),
+            ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('$logged dari $daysInMonth hari tercatat',
-                    style: const TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-                const SizedBox(height: 4),
-                Text(
-                  _streak > 0
-                      ? 'Kamu mencatat $_streak hari berturut-turut.'
-                      : 'Mulai lagi kapan pun kamu siap. Tidak ada yang tertinggal.',
-                  style: const TextStyle(fontSize: 13, color: AppColors.textMuted, height: 1.4),
-                ),
-              ],
+        ],
+      ),
+    );
+  }
+
+  Widget _dayCell(int d, DateTime t, Map<int, int> levels) {
+    final isToday = d == t.day;
+    final level = levels[d] ?? (d > t.day ? -1 : 0);
+    return Container(
+      height: 50,
+      margin: const EdgeInsets.all(1.5),
+      decoration: BoxDecoration(
+        color: isToday ? AppColors.sagePale : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 30,
+            height: 30,
+            child: CustomPaint(painter: _MoodTreePainter(level)),
+          ),
+          const SizedBox(height: 1),
+          Text(
+            '$d',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: isToday ? FontWeight.w800 : FontWeight.w500,
+              color: isToday ? AppColors.sageDeep : AppColors.textMuted,
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _legendItem(int level, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 20,
+          height: 20,
+          child: CustomPaint(painter: _MoodTreePainter(level)),
+        ),
+        const SizedBox(width: 4),
+        Text(label, style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted)),
+      ],
     );
   }
 
@@ -883,7 +1009,7 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _cardTitle(Icons.show_chart_rounded, 'Mood 7 hari terakhir'),
+          _cardTitle(Icons.spa_rounded, 'Mood 7 hari terakhir'),
           const SizedBox(height: 14),
           if (count < _minEntries)
             _emptyState(
@@ -899,20 +1025,22 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
                 children: [
                   SizedBox(
                     width: 26,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        for (int l = 5; l >= 1; l--)
-                          Text(_emoji(l), style: const TextStyle(fontSize: 14)),
-                      ],
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 9.5),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          for (int l = 5; l >= 1; l--)
+                            Text(_emoji(l), style: const TextStyle(fontSize: 14)),
+                        ],
+                      ),
                     ),
                   ),
                   Expanded(
                     child: CustomPaint(
                       painter: _WeekChartPainter(
                         values: values,
-                        lineColor: AppColors.sage,
-                        gridColor: AppColors.borderLight,
+                        gridColor: AppColors.border,
                         colorFor: (v) => Color(_moodByLevel(v)['color']),
                       ),
                     ),
@@ -940,12 +1068,12 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
   }
 
   static const List<Color> _factorColors = [
-    AppColors.sageDeep,
-    AppColors.sage,
-    AppColors.terracotta,
-    AppColors.peach,
-    AppColors.sageLight,
-    AppColors.lavenderLight,
+    _Nature.moss,
+    _Nature.bark,
+    _Nature.clay,
+    _Nature.fern,
+    _Nature.lake,
+    _Nature.sand,
   ];
 
   /// Faktor yang sering dipilih: grafik donat porsi tiap faktor + legenda.
@@ -966,7 +1094,7 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _cardTitle(Icons.label_outline_rounded, 'Faktor yang paling sering dipilih'),
+          _cardTitle(Icons.park_rounded, 'Faktor yang paling sering dipilih'),
           const SizedBox(height: 16),
           if (!hasData)
             _emptyState(
@@ -1102,10 +1230,14 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
 
   // ───────────────────────── Reusable widgets ─────────────────────────
 
-  Widget _card({required Widget child, EdgeInsets padding = const EdgeInsets.all(16)}) {
+  /// Kartu dengan ranting daun tipis di pojok kanan atas.
+  Widget _card({
+    required Widget child,
+    EdgeInsets padding = const EdgeInsets.all(16),
+    bool sprig = true,
+  }) {
     return Container(
       width: double.infinity,
-      padding: padding,
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(22),
@@ -1118,7 +1250,26 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
           ),
         ],
       ),
-      child: child,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(21),
+        child: Stack(
+          children: [
+            if (sprig)
+              const Positioned(
+                top: 0,
+                right: 0,
+                child: IgnorePointer(
+                  child: SizedBox(
+                    width: 96,
+                    height: 96,
+                    child: CustomPaint(painter: _SprigPainter()),
+                  ),
+                ),
+              ),
+            Padding(padding: padding, child: child),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1175,6 +1326,243 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+//  NATURE KIT: palet, pohon, pemandangan, dan painter
+//  Semua digambar sebagai bentuk datar (flat), bukan gradasi.
+// ═══════════════════════════════════════════════════════════════════════
+
+class _Nature {
+  static const bark = Color(0xFF7A5C45);
+  static const moss = Color(0xFF6F8F5A);
+  static const fern = Color(0xFF9DB87C);
+  static const pine = Color(0xFF4F7355);
+  static const blossom = Color(0xFFE7A7B4);
+  static const blossomLight = Color(0xFFF6D3DA);
+  static const autumn = Color(0xFFD9894B);
+  static const autumnDeep = Color(0xFFB9692F);
+  static const rain = Color(0xFF8FA7B5);
+  static const sand = Color(0xFFE0CFA9);
+  static const clay = Color(0xFFC98B6B);
+  static const lake = Color(0xFF8FB5B0);
+
+  static const sandTint = Color(0xFFF3E9CF);
+  static const mintTint = Color(0xFFDDEBCB);
+  static const lakeTint = Color(0xFFD6E8E3);
+}
+
+enum _TreeKind { pine, round, blossom, autumn, bare, bush }
+
+const List<Offset> _canopyDots = [
+  Offset(-0.20, -0.62),
+  Offset(0.18, -0.55),
+  Offset(0.02, -0.80),
+  Offset(-0.12, -0.92),
+  Offset(0.22, -0.74),
+];
+
+/// Menggambar satu pohon dengan pangkal di [base], tinggi [h].
+void _paintTree(
+  Canvas c,
+  _TreeKind kind,
+  Offset base,
+  double h, {
+  required Color trunk,
+  required Color leaf,
+  Color? accent,
+  double sway = 0,
+}) {
+  c.save();
+  c.translate(base.dx, base.dy);
+  c.rotate(sway);
+  final tp = Paint()..color = trunk;
+  final lp = Paint()..color = leaf;
+
+  switch (kind) {
+    case _TreeKind.pine:
+      {
+        final tw = h * 0.07;
+        c.drawRect(Rect.fromLTWH(-tw / 2, -h * 0.18, tw, h * 0.18), tp);
+        for (int i = 0; i < 3; i++) {
+          final apex = -h + i * h * 0.24;
+          final bot = apex + h * 0.42;
+          final hw = h * (0.19 + 0.08 * i);
+          c.drawPath(
+            Path()
+              ..moveTo(0, apex)
+              ..lineTo(-hw, bot)
+              ..lineTo(hw, bot)
+              ..close(),
+            lp,
+          );
+        }
+      }
+    case _TreeKind.round:
+    case _TreeKind.blossom:
+    case _TreeKind.autumn:
+      {
+        final tw = h * 0.08;
+        c.drawRect(Rect.fromLTWH(-tw / 2, -h * 0.4, tw, h * 0.4), tp);
+        c.drawCircle(Offset(0, -h * 0.62), h * 0.3, lp);
+        c.drawCircle(Offset(-h * 0.2, -h * 0.5), h * 0.22, lp);
+        c.drawCircle(Offset(h * 0.2, -h * 0.5), h * 0.22, lp);
+        c.drawCircle(Offset(0, -h * 0.78), h * 0.2, lp);
+        if (accent != null) {
+          final ap = Paint()..color = accent;
+          for (final o in _canopyDots) {
+            c.drawCircle(Offset(o.dx * h, o.dy * h), h * 0.045, ap);
+          }
+        }
+      }
+    case _TreeKind.bare:
+      {
+        final bp = Paint()
+          ..color = trunk
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeWidth = h * 0.07;
+        c.drawLine(Offset.zero, Offset(0, -h * 0.58), bp);
+        bp.strokeWidth = h * 0.04;
+        c.drawLine(Offset(0, -h * 0.35), Offset(-h * 0.22, -h * 0.62), bp);
+        c.drawLine(Offset(0, -h * 0.45), Offset(h * 0.22, -h * 0.76), bp);
+        c.drawLine(Offset(0, -h * 0.58), Offset(-h * 0.1, -h * 0.96), bp);
+        c.drawLine(Offset(0, -h * 0.58), Offset(h * 0.12, -h * 0.9), bp);
+      }
+    case _TreeKind.bush:
+      {
+        c.drawCircle(Offset(-h * 0.45, -h * 0.3), h * 0.35, lp);
+        c.drawCircle(Offset(h * 0.45, -h * 0.3), h * 0.35, lp);
+        c.drawCircle(Offset(0, -h * 0.5), h * 0.45, lp);
+      }
+  }
+  c.restore();
+}
+
+/// Menggambar sehelai daun. [angle] 0 = menunjuk ke kanan.
+void _drawLeaf(Canvas c, Offset o, double angle, double len, Paint fill, {Paint? outline}) {
+  c.save();
+  c.translate(o.dx, o.dy);
+  c.rotate(angle);
+  final path = Path()
+    ..moveTo(0, 0)
+    ..quadraticBezierTo(len * 0.5, -len * 0.45, len, 0)
+    ..quadraticBezierTo(len * 0.5, len * 0.45, 0, 0);
+  c.drawPath(path, fill);
+  if (outline != null) c.drawPath(path, outline);
+  c.restore();
+}
+
+// ───────────────────────── Pohon mood (ikon kalender) ─────────────────────────
+
+/// level 1..5 = pohon sesuai mood, 0 = belum dicatat (tunas), -1 = hari yang belum tiba.
+class _MoodTreePainter extends CustomPainter {
+  final int level;
+  const _MoodTreePainter(this.level);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width, h = size.height;
+    final base = Offset(w / 2, h * 0.9);
+
+    if (level < 0) {
+      canvas.drawCircle(base - const Offset(0, 2), 1.6, Paint()..color = _Nature.sand);
+      return;
+    }
+
+    canvas.drawOval(
+      Rect.fromCenter(center: base, width: w * 0.64, height: h * 0.1),
+      Paint()..color = _Nature.sand.withValues(alpha: 0.85),
+    );
+
+    if (level == 0) {
+      final stem = Paint()
+        ..color = _Nature.moss.withValues(alpha: 0.5)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.6
+        ..strokeCap = StrokeCap.round;
+      canvas.drawLine(base, base - Offset(0, h * 0.3), stem);
+      final lf = Paint()..color = _Nature.moss.withValues(alpha: 0.5);
+      final top = base - Offset(0, h * 0.2);
+      _drawLeaf(canvas, top, -0.7, h * 0.2, lf);
+      _drawLeaf(canvas, top, -math.pi + 0.7, h * 0.2, lf);
+      return;
+    }
+
+    final th = h * 0.8;
+    switch (level) {
+      case 5:
+        _paintTree(canvas, _TreeKind.blossom, base, th,
+            trunk: _Nature.bark, leaf: _Nature.blossom, accent: _Nature.blossomLight);
+      case 4:
+        _paintTree(canvas, _TreeKind.round, base, th,
+            trunk: _Nature.bark, leaf: _Nature.moss, accent: _Nature.fern);
+      case 3:
+        _paintTree(canvas, _TreeKind.pine, base, th,
+            trunk: _Nature.bark, leaf: _Nature.pine);
+      case 2:
+        _paintTree(canvas, _TreeKind.autumn, base, th,
+            trunk: _Nature.bark, leaf: _Nature.autumn, accent: _Nature.autumnDeep);
+      default:
+        _paintTree(canvas, _TreeKind.bare, base, th,
+            trunk: _Nature.bark.withValues(alpha: 0.85), leaf: _Nature.bark);
+        final rp = Paint()
+          ..color = _Nature.rain
+          ..strokeWidth = 1.4
+          ..strokeCap = StrokeCap.round;
+        for (int i = 0; i < 3; i++) {
+          final x = w * (0.28 + 0.22 * i);
+          final y = h * (0.10 + 0.06 * (i % 2));
+          canvas.drawLine(Offset(x, y), Offset(x - 1.5, y + h * 0.12), rp);
+        }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _MoodTreePainter old) => old.level != level;
+}
+
+// ───────────────────────── Ranting hias di kartu ─────────────────────────
+
+class _SprigPainter extends CustomPainter {
+  const _SprigPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width, h = size.height;
+    final p0 = Offset(w, 0);
+    final p1 = Offset(w * 0.55, h * 0.1);
+    final p2 = Offset(w * 0.18, h * 0.78);
+
+    canvas.drawPath(
+      Path()
+        ..moveTo(p0.dx, p0.dy)
+        ..quadraticBezierTo(p1.dx, p1.dy, p2.dx, p2.dy),
+      Paint()
+        ..color = _Nature.moss.withValues(alpha: 0.22)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.6
+        ..strokeCap = StrokeCap.round,
+    );
+
+    final leaf = Paint()..color = _Nature.moss.withValues(alpha: 0.16);
+    for (int i = 1; i <= 5; i++) {
+      final t = i / 6;
+      final mt = 1 - t;
+      final x = mt * mt * p0.dx + 2 * mt * t * p1.dx + t * t * p2.dx;
+      final y = mt * mt * p0.dy + 2 * mt * t * p1.dy + t * t * p2.dy;
+      final dx = 2 * mt * (p1.dx - p0.dx) + 2 * t * (p2.dx - p1.dx);
+      final dy = 2 * mt * (p1.dy - p0.dy) + 2 * t * (p2.dy - p1.dy);
+      final ang = math.atan2(dy, dx);
+      final side = i.isEven ? 1.0 : -1.0;
+      _drawLeaf(canvas, Offset(x, y), ang + side * 0.9, 15, leaf);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _SprigPainter old) => false;
+}
+
+// ───────────────────────── Lencana daun ─────────────────────────
+
 /// Lencana daun dengan animasi bergoyang pelan.
 /// Bisa dipakai ulang, misalnya untuk logo "Tenang" di app bar:
 /// `const AnimatedLeafBadge(size: 32)`.
@@ -1227,6 +1615,8 @@ class _AnimatedLeafBadgeState extends State<AnimatedLeafBadge>
   }
 }
 
+// ───────────────────────── Grafik ─────────────────────────
+
 /// Grafik donat dengan celah kecil antar segmen.
 class _DonutPainter extends CustomPainter {
   final List<double> values;
@@ -1272,70 +1662,127 @@ class _DonutPainter extends CustomPainter {
       old.values != values || old.colors != colors;
 }
 
-/// Grafik garis mood 7 hari. Nilai null = hari tanpa catatan (garis terputus).
+/// Grafik mood 7 hari berbentuk sulur: garis melengkung dengan daun
+/// berwarna sesuai mood. Nilai null = hari tanpa catatan (sulur terputus).
 class _WeekChartPainter extends CustomPainter {
   final List<int?> values;
-  final Color lineColor;
   final Color gridColor;
   final Color Function(int) colorFor;
 
   _WeekChartPainter({
     required this.values,
-    required this.lineColor,
     required this.gridColor,
     required this.colorFor,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    const padY = 8.0;
+    const padY = 18.0;
     final h = size.height - padY * 2;
     final stepX = size.width / values.length;
 
     double yFor(int v) => padY + (5 - v) / 4 * h;
     double xFor(int i) => stepX * (i + 0.5);
 
+    // garis bantu putus-putus
     final grid = Paint()
       ..color = gridColor
       ..strokeWidth = 1;
     for (int l = 1; l <= 5; l++) {
-      canvas.drawLine(Offset(0, yFor(l)), Offset(size.width, yFor(l)), grid);
+      final y = yFor(l);
+      for (double x = 0; x < size.width; x += 8) {
+        canvas.drawLine(Offset(x, y), Offset(math.min(x + 4, size.width), y), grid);
+      }
     }
 
-    final line = Paint()
-      ..color = lineColor.withValues(alpha: 0.7)
-      ..strokeWidth = 2.5
+    // sulur
+    final vine = Paint()
+      ..color = _Nature.bark.withValues(alpha: 0.75)
       ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-
-    final path = Path();
-    var penDown = false;
-    for (int i = 0; i < values.length; i++) {
-      final v = values[i];
-      if (v == null) {
-        penDown = false;
-        continue;
-      }
-      final p = Offset(xFor(i), yFor(v));
-      if (penDown) {
-        path.lineTo(p.dx, p.dy);
-      } else {
-        path.moveTo(p.dx, p.dy);
-        penDown = true;
-      }
+      ..strokeWidth = 2.6
+      ..strokeCap = StrokeCap.round;
+    for (int i = 0; i < values.length - 1; i++) {
+      final a = values[i], b = values[i + 1];
+      if (a == null || b == null) continue;
+      final p0 = Offset(xFor(i), yFor(a));
+      final p1 = Offset(xFor(i + 1), yFor(b));
+      final cx = (p0.dx + p1.dx) / 2;
+      canvas.drawPath(
+        Path()
+          ..moveTo(p0.dx, p0.dy)
+          ..cubicTo(cx, p0.dy, cx, p1.dy, p1.dx, p1.dy),
+        vine,
+      );
     }
-    canvas.drawPath(path, line);
 
+    // daun + simpul
+    final outline = Paint()
+      ..color = Colors.black.withValues(alpha: 0.12)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
     for (int i = 0; i < values.length; i++) {
       final v = values[i];
       if (v == null) continue;
       final p = Offset(xFor(i), yFor(v));
-      canvas.drawCircle(p, 7, Paint()..color = Colors.white);
-      canvas.drawCircle(p, 5.5, Paint()..color = colorFor(v));
+      final ang = i.isEven ? -0.9 : -math.pi + 0.9;
+      _drawLeaf(canvas, p, ang, 17, Paint()..color = colorFor(v), outline: outline);
+      canvas.drawCircle(p, 4.6, Paint()..color = Colors.white);
+      canvas.drawCircle(p, 3.1, Paint()..color = _Nature.bark);
     }
   }
 
   @override
   bool shouldRepaint(covariant _WeekChartPainter old) => old.values != values;
 }
+
+/// Ilustrasi bukit minimalis untuk bagian bawah kartu sapaan.
+/// Dibuat ringan dan tidak menutupi teks maupun avatar.
+class _GreetingNaturePainter extends CustomPainter {
+  const _GreetingNaturePainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    final backHill = Path()
+      ..moveTo(0, h * 0.72)
+      ..quadraticBezierTo(w * 0.24, h * 0.12, w * 0.49, h * 0.64)
+      ..quadraticBezierTo(w * 0.76, h * 1.05, w, h * 0.38)
+      ..lineTo(w, h)
+      ..lineTo(0, h)
+      ..close();
+
+    canvas.drawPath(
+      backHill,
+      Paint()..color = const Color(0xFFD8E7CE),
+    );
+
+    final frontHill = Path()
+      ..moveTo(0, h * 0.84)
+      ..quadraticBezierTo(w * 0.32, h * 0.42, w * 0.62, h * 0.82)
+      ..quadraticBezierTo(w * 0.83, h * 1.05, w, h * 0.68)
+      ..lineTo(w, h)
+      ..lineTo(0, h)
+      ..close();
+
+    canvas.drawPath(
+      frontHill,
+      Paint()..color = const Color(0xFFBBD3A9),
+    );
+
+    final grassPaint = Paint()
+      ..color = const Color(0xFF6F9665).withValues(alpha: 0.78)
+      ..strokeWidth = 1
+      ..strokeCap = StrokeCap.round;
+
+    for (final x in [w * 0.07, w * 0.13, w * 0.77, w * 0.84, w * 0.94]) {
+      canvas.drawLine(Offset(x, h), Offset(x - 2, h * 0.65), grassPaint);
+      canvas.drawLine(Offset(x, h), Offset(x + 3, h * 0.73), grassPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _GreetingNaturePainter oldDelegate) => false;
+}
+

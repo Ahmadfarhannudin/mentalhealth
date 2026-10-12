@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
 import '../screens/mood_tracker_screen.dart';
@@ -5,10 +6,12 @@ import '../screens/journal_screen.dart';
 import '../screens/cbt_exercises_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  /// Nama pengguna yang ditampilkan di ucapan beranda.
   final String userName;
 
-  const HomeScreen({super.key, this.userName = 'Teman'});
+  const HomeScreen({
+    super.key,
+    this.userName = 'Teman',
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -20,193 +23,287 @@ class _HomeScreenState extends State<HomeScreen> {
   late final List<Widget> _screens = [
     MoodTrackerScreen(
       userName: widget.userName,
-      onTabChanged: (index) => setState(() => _selectedIndex = index),
+      onTabChanged: (index) {
+        if (index >= 0 && index < 4) {
+          setState(() => _selectedIndex = index);
+        }
+      },
     ),
     const JournalScreen(),
     const CbtExercisesScreen(),
-    // CommunityScreen placeholder
     const Center(
-      child: Text('Komunitas (dalam pengembangan)', style: TextStyle(color: Colors.grey)),
+      child: Text(
+        'Komunitas (dalam pengembangan)',
+        style: TextStyle(color: Colors.grey),
+      ),
     ),
   ];
 
   @override
   Widget build(BuildContext context) {
-    final profileInitial = widget.userName.trim().isEmpty
-        ? 'T'
-        : widget.userName.trim()[0].toUpperCase();
+    final trimmedName = widget.userName.trim();
+    final profileInitial =
+        trimmedName.isEmpty ? 'T' : trimmedName[0].toUpperCase();
 
     return Scaffold(
       backgroundColor: AppColors.cream,
-      body: Stack(
-        children: [
-          // Background bertema alam & kesegaran
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Color(0xFFE5EFE7), // sage lembut segar di atas
-                    Color(0xFFF2F7F2), // mint sangat lembut
-                    AppColors.cream,   // transisi ke krem hangat di bawah
-                  ],
-                  stops: [0.0, 0.35, 1.0],
-                ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildGlobalHeader(profileInitial),
+            Expanded(
+              child: IndexedStack(
+                index: _selectedIndex,
+                children: _screens,
               ),
-            ),
-          ),
-          // Ornamen motif dedaunan alam lembut di kanan atas & kiri
-          Positioned(
-            top: -30,
-            right: -25,
-            child: IgnorePointer(
-              child: Icon(
-                Icons.eco_rounded,
-                size: 210,
-                color: AppColors.sageLight.withValues(alpha: 0.12),
-              ),
-            ),
-          ),
-          Positioned(
-            top: 220,
-            left: -40,
-            child: IgnorePointer(
-              child: Icon(
-                Icons.park_rounded,
-                size: 190,
-                color: AppColors.sage.withValues(alpha: 0.06),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 40,
-            right: -20,
-            child: IgnorePointer(
-              child: Icon(
-                Icons.forest_rounded,
-                size: 160,
-                color: AppColors.mint.withValues(alpha: 0.08),
-              ),
-            ),
-          ),
-          SafeArea(
-            child: Column(
-              children: [
-                _buildGlobalHeader(profileInitial),
-                Expanded(
-                  child: IndexedStack(index: _selectedIndex, children: _screens),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          border: Border(
-            top: BorderSide(color: AppColors.borderLight, width: 1),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.shadow,
-              blurRadius: 10,
-              offset: const Offset(0, -2),
             ),
           ],
         ),
-        child: BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          selectedItemColor: AppColors.sage,
-          unselectedItemColor: AppColors.textMuted,
-          selectedFontSize: 12,
-          unselectedFontSize: 11,
-          currentIndex: _selectedIndex,
-          onTap: (index) => setState(() => _selectedIndex = index),
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.psychology_outlined),
-              label: 'Check-in',
-              activeIcon: Icon(Icons.psychology),
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.auto_stories_outlined),
-              label: 'Jurnal',
-              activeIcon: Icon(Icons.auto_stories),
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.fitness_center_outlined),
-              label: 'Coping',
-              activeIcon: Icon(Icons.fitness_center),
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.people_outline),
-              label: 'Komunitas',
-              activeIcon: Icon(Icons.people),
+      ),
+      bottomNavigationBar: _buildCustomNavBar(),
+    );
+  }
+
+  // =========================================================
+  // FLOATING NATURE NAVIGATION BAR
+  // =========================================================
+
+  Widget _buildCustomNavBar() {
+    return Container(
+      color: Colors.transparent,
+      padding: const EdgeInsets.fromLTRB(14, 6, 14, 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 5,
+          vertical: 7,
+        ),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF7F9F2),
+          borderRadius: BorderRadius.circular(25),
+          border: Border.all(
+            color: const Color(0xFFDCE6D4),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF536F51).withValues(alpha: 0.09),
+              blurRadius: 22,
+              spreadRadius: 0,
+              offset: const Offset(0, 5),
             ),
           ],
+        ),
+        child: SafeArea(
+          top: false,
+          child: Row(
+            children: [
+              Expanded(
+                child: _navItem(
+                  0,
+                  Icons.spa_outlined,
+                  Icons.spa_rounded,
+                  'Check-in',
+                ),
+              ),
+              Expanded(
+                child: _navItem(
+                  1,
+                  Icons.menu_book_outlined,
+                  Icons.menu_book_rounded,
+                  'Jurnal',
+                ),
+              ),
+              Expanded(
+                child: _navItem(
+                  2,
+                  Icons.self_improvement_outlined,
+                  Icons.self_improvement_rounded,
+                  'Coping',
+                ),
+              ),
+              Expanded(
+                child: _navItem(
+                  3,
+                  Icons.people_outline_rounded,
+                  Icons.people_rounded,
+                  'Komunitas',
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
+  Widget _navItem(
+    int index,
+    IconData icon,
+    IconData activeIcon,
+    String label,
+  ) {
+    final isSelected = _selectedIndex == index;
+
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: label,
+      child: GestureDetector(
+        onTap: () {
+          if (_selectedIndex != index) {
+            setState(() => _selectedIndex = index);
+          }
+        },
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
+          margin: const EdgeInsets.symmetric(horizontal: 2),
+          padding: const EdgeInsets.symmetric(
+            vertical: 5,
+            horizontal: 1,
+          ),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? const Color(0xFFE5EEDD)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(19),
+            border: Border.all(
+              color: isSelected
+                  ? const Color(0xFFD5E3CB)
+                  : Colors.transparent,
+              width: 1,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutCubic,
+                width: 36,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? const Color(0xFFD5E5CB)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 180),
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeIn,
+                  transitionBuilder: (child, animation) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: ScaleTransition(
+                        scale: animation,
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: Icon(
+                    isSelected ? activeIcon : icon,
+                    key: ValueKey('$index-$isSelected'),
+                    size: 22,
+                    color: isSelected
+                        ? const Color(0xFF527451)
+                        : const Color(0xFF91A099),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 3),
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOut,
+                style: TextStyle(
+                  fontSize: 10.5,
+                  height: 1.2,
+                  fontWeight:
+                      isSelected ? FontWeight.w700 : FontWeight.w500,
+                  color: isSelected
+                      ? const Color(0xFF527451)
+                      : const Color(0xFF84938B),
+                ),
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.visible,
+                ),
+              ),
+              const SizedBox(height: 3),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutCubic,
+                width: isSelected ? 12 : 0,
+                height: 3,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF71966D),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // =========================================================
+  // GLOBAL HEADER
+  // =========================================================
+
   Widget _buildGlobalHeader(String profileInitial) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
+      padding: const EdgeInsets.fromLTRB(18, 10, 18, 8),
       child: Row(
         children: [
-          Expanded(
-            child: Row(
-              children: [
-                Container(
-                  width: 34,
-                  height: 34,
-                  alignment: Alignment.center,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.sage,
-                  ),
-                  child: const Text(
-                    'T',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                const Text(
-                  'Tenang',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.3,
-                    color: AppColors.textDark,
-                  ),
-                ),
-              ],
+          Container(
+            width: 36,
+            height: 36,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Color(0xFF7FA184),
+            ),
+            child: const Icon(
+              Icons.spa_rounded,
+              color: Colors.white,
+              size: 21,
+            ),
+          ),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'Tenang',
+              style: TextStyle(
+                fontSize: 19,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+                color: AppColors.textDark,
+              ),
             ),
           ),
           Container(
-            width: 38,
-            height: 38,
+            width: 39,
+            height: 39,
             alignment: Alignment.center,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.sagePale,
-              border: Border.all(color: AppColors.sageLight, width: 1.5),
+              color: const Color(0xFFE7F0E1),
+              border: Border.all(
+                color: const Color(0xFFA8C49C),
+                width: 1.4,
+              ),
             ),
             child: Text(
               profileInitial,
               style: const TextStyle(
                 fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: AppColors.sageDeep,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF527451),
               ),
             ),
           ),
