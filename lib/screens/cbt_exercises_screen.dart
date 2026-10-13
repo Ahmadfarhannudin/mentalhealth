@@ -17,7 +17,7 @@ class _CbtExercisesScreenState extends State<CbtExercisesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.cream,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('Latihan Coping'),
         leading: IconButton(

@@ -46,7 +46,7 @@ class _HomeScreenState extends State<HomeScreen> {
         trimmedName.isEmpty ? 'T' : trimmedName[0].toUpperCase();
 
     return Scaffold(
-      backgroundColor: AppColors.cream,
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: Column(
           children: [

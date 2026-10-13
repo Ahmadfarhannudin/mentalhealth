@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text.dart';
 import '../data/models.dart';
+import 'scan_expression_screen.dart';
 
 /// Satu catatan suasana hati (sementara disimpan di memori).
 /// Ganti dengan model/database milikmu bila sudah ada.
@@ -193,6 +194,33 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
     );
   }
 
+  /// Buka kamera untuk mendeteksi ekspresi wajah & otomatis isi mood.
+  Future<void> _handleScanMood() async {
+    final result = await Navigator.push<ExpressionResult>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ScanExpressionScreen(),
+      ),
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        _selectedMood = result.moodLevel;
+        if (!_selectedTags.contains('Kesehatan')) {
+          _selectedTags.add('Kesehatan');
+        }
+        _noteController.text = 'Deteksi otomatis: ${result.label} ${result.emoji}';
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Mood diatur otomatis ke "${result.label} ${result.emoji}" dari hasil scan.'),
+          backgroundColor: AppColors.sage,
+        ),
+      );
+    }
+  }
+
   /// Muat catatan hari ini ke form agar bisa diperbarui.
   void _startEditing() {
     final e = _entries.firstWhere((e) => e.date == _today());
@@ -213,7 +241,7 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
     final hasLoggedToday = _entries.any((e) => e.date == _today());
 
     return Scaffold(
-      backgroundColor: AppColors.cream,
+      backgroundColor: Colors.transparent,
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
         child: Column(
@@ -377,10 +405,10 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
         const SizedBox(width: 12),
         Expanded(
           child: _quickActionButton(
-            icon: Icons.fitness_center_rounded,
-            label: 'Coping Skill',
+            icon: Icons.camera_alt_rounded,
+            label: 'Scan Ekspresi',
             color: AppColors.terracotta,
-            onTap: () => widget.onTabChanged?.call(2),
+            onTap: _handleScanMood,
           ),
         ),
       ],
