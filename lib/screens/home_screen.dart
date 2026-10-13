@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
 import '../screens/mood_tracker_screen.dart';
 import '../screens/journal_screen.dart';
+import '../screens/chat_ai_screen.dart';
 import '../screens/cbt_exercises_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -31,12 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
     ),
     const JournalScreen(),
     const CbtExercisesScreen(),
-    const Center(
-      child: Text(
-        'Komunitas (dalam pengembangan)',
-        style: TextStyle(color: Colors.grey),
-      ),
-    ),
+    const ChatAiScreen(),
   ];
 
   @override
@@ -124,9 +120,9 @@ class _HomeScreenState extends State<HomeScreen> {
               Expanded(
                 child: _navItem(
                   3,
-                  Icons.people_outline_rounded,
-                  Icons.people_rounded,
-                  'Komunitas',
+                  Icons.chat_bubble_outline_rounded,
+                  Icons.chat_bubble_rounded,
+                  'Chat AI',
                 ),
               ),
             ],
