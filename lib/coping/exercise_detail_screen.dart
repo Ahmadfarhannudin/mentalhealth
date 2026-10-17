@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../core/theme/app_colors.dart';
 import 'coping_exercises.dart';
 import 'exercise_ui.dart';
@@ -25,7 +26,9 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
 
   Future<void> _start() async {
     final completed = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => ExerciseSessionScreen(exercise: widget.exercise)),
+      MaterialPageRoute(
+        builder: (_) => ExerciseSessionScreen(exercise: widget.exercise),
+      ),
     );
     if (completed == true && mounted) Navigator.of(context).pop(true);
   }
@@ -84,18 +87,29 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
                     children: [
                       Hero(
                         tag: 'ex-icon-${ex.id}',
-                        child: IconTile(icon: ex.icon, accent: accent, size: 64),
+                        child: IconTile(
+                          icon: ex.icon,
+                          accent: accent,
+                          size: 64,
+                        ),
                       ),
                       const SizedBox(width: 14),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 5,
+                        ),
                         decoration: BoxDecoration(
                           color: accent.withAlpha(38),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           ex.category,
-                          style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: accent),
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: accent,
+                          ),
                         ),
                       ),
                     ],
@@ -113,16 +127,35 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
                   const SizedBox(height: 8),
                   Text(
                     ex.description,
-                    style: const TextStyle(fontSize: 14, height: 1.5, color: AppColors.textMuted),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      height: 1.5,
+                      color: AppColors.textMuted,
+                    ),
                   ),
                   const SizedBox(height: 18),
                   Row(
                     children: [
-                      _Stat(icon: Icons.timer_outlined, label: '${ex.minutes} menit'),
-                      const SizedBox(width: 10),
-                      _Stat(icon: Icons.touch_app_outlined, label: ex.kindLabel),
-                      const SizedBox(width: 10),
-                      _Stat(icon: Icons.format_list_numbered, label: '${ex.steps.length} langkah'),
+                      Expanded(
+                        child: _Stat(
+                          icon: Icons.timer_outlined,
+                          label: '${ex.minutes} menit',
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _Stat(
+                          icon: Icons.touch_app_outlined,
+                          label: ex.kindLabel,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _Stat(
+                          icon: Icons.format_list_numbered,
+                          label: '${ex.steps.length} langkah',
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -132,33 +165,55 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
             const SectionTitle('Tentang latihan'),
             Text(
               ex.overview,
-              style: const TextStyle(fontSize: 14.5, height: 1.6, color: AppColors.textBody),
+              style: const TextStyle(
+                fontSize: 14.5,
+                height: 1.6,
+                color: AppColors.textBody,
+              ),
             ),
 
             const SectionTitle('Manfaat'),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: ex.benefits
-                  .map(
-                    (b) => Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.borderLight),
+            LayoutBuilder(
+              builder: (context, constraints) => Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: ex.benefits
+                    .map(
+                      (b) => Container(
+                        constraints: BoxConstraints(
+                          maxWidth: constraints.maxWidth,
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppColors.borderLight),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check_circle, size: 16, color: accent),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                b,
+                                softWrap: true,
+                                overflow: TextOverflow.visible,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.textBody,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.check_circle, size: 16, color: accent),
-                          const SizedBox(width: 6),
-                          Text(b, style: const TextStyle(fontSize: 13, color: AppColors.textBody)),
-                        ],
-                      ),
-                    ),
-                  )
-                  .toList(),
+                    )
+                    .toList(),
+              ),
             ),
 
             const SectionTitle('Langkah-langkah'),
@@ -188,12 +243,20 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.science_outlined, size: 22, color: AppColors.sageDeep),
+                  const Icon(
+                    Icons.science_outlined,
+                    size: 22,
+                    color: AppColors.sageDeep,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       ex.evidence,
-                      style: const TextStyle(fontSize: 13.5, height: 1.55, color: AppColors.textBody),
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        height: 1.55,
+                        color: AppColors.textBody,
+                      ),
                     ),
                   ),
                 ],
@@ -205,7 +268,10 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
               _Note(icon: Icons.info_outline, text: ex.caution!),
             ],
             const SizedBox(height: 14),
-            const _Note(icon: Icons.health_and_safety_outlined, text: safetyNote),
+            const _Note(
+              icon: Icons.health_and_safety_outlined,
+              text: safetyNote,
+            ),
           ],
         ),
       ),
@@ -272,7 +338,10 @@ class _StepRow extends StatelessWidget {
                 width: 28,
                 height: 28,
                 alignment: Alignment.center,
-                decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
+                decoration: BoxDecoration(
+                  color: accent,
+                  shape: BoxShape.circle,
+                ),
                 child: Text(
                   '$index',
                   style: const TextStyle(
@@ -283,7 +352,9 @@ class _StepRow extends StatelessWidget {
                 ),
               ),
               if (!isLast)
-                Expanded(child: Container(width: 2, color: accent.withAlpha(60))),
+                Expanded(
+                  child: Container(width: 2, color: accent.withAlpha(60)),
+                ),
             ],
           ),
           const SizedBox(width: 14),
@@ -304,7 +375,11 @@ class _StepRow extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(
                     step.body,
-                    style: const TextStyle(fontSize: 13.5, height: 1.5, color: AppColors.textMuted),
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      height: 1.5,
+                      color: AppColors.textMuted,
+                    ),
                   ),
                 ],
               ),
@@ -338,7 +413,11 @@ class _Note extends StatelessWidget {
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(fontSize: 12.5, height: 1.5, color: Color(0xFF6B5428)),
+              style: const TextStyle(
+                fontSize: 12.5,
+                height: 1.5,
+                color: Color(0xFF6B5428),
+              ),
             ),
           ),
         ],
