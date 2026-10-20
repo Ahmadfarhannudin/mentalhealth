@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../core/theme/app_colors.dart';
 import 'coping_exercises.dart';
 import 'exercise_ui.dart';
@@ -33,8 +34,14 @@ class _ExerciseSessionScreenState extends State<ExerciseSessionScreen> {
         title: const Text('Keluar dari latihan?'),
         content: const Text('Progres latihan ini tidak akan tersimpan.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Lanjutkan')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Keluar')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Lanjutkan'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Keluar'),
+          ),
         ],
       ),
     );
@@ -51,19 +58,25 @@ class _ExerciseSessionScreenState extends State<ExerciseSessionScreen> {
           backgroundColor: Colors.transparent,
           elevation: 0,
           centerTitle: true,
-          leading: IconButton(icon: const Icon(Icons.close), onPressed: _confirmExit),
+          leading: IconButton(
+            tooltip: 'Tutup latihan',
+            constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+            icon: const Icon(Icons.close),
+            onPressed: _confirmExit,
+          ),
           title: Text(
             ex.title,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.sageDeep),
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: AppColors.sageDeep,
+            ),
           ),
         ),
         body: SafeArea(
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
-            child: KeyedSubtree(
-              key: ValueKey(_stage),
-              child: _buildStage(ex),
-            ),
+            child: KeyedSubtree(key: ValueKey(_stage), child: _buildStage(ex)),
           ),
         ),
       ),
@@ -149,7 +162,7 @@ class _RatingPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final isAfter = before != null;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
       children: [
         Container(
           padding: const EdgeInsets.all(24),
@@ -159,22 +172,38 @@ class _RatingPage extends StatelessWidget {
               if (isAfter)
                 const Padding(
                   padding: EdgeInsets.only(bottom: 12),
-                  child: Icon(Icons.check_circle, size: 48, color: AppColors.sage),
+                  child: Icon(
+                    Icons.check_circle,
+                    size: 48,
+                    color: AppColors.sage,
+                  ),
                 ),
               Text(
                 title,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.sageDeep),
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.sageDeep,
+                ),
               ),
               const SizedBox(height: 10),
               Text(
                 question,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 14.5, height: 1.5, color: AppColors.textBody),
+                style: const TextStyle(
+                  fontSize: 14.5,
+                  height: 1.5,
+                  color: AppColors.textBody,
+                ),
               ),
               const SizedBox(height: 24),
               Text(
                 value.round().toString(),
-                style: const TextStyle(fontSize: 48, fontWeight: FontWeight.w800, color: AppColors.sage),
+                style: const TextStyle(
+                  fontSize: 48,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.sage,
+                ),
               ),
               Slider(
                 value: value,
@@ -191,8 +220,20 @@ class _RatingPage extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('0 · Tenang', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
-                    Text('10 · Sangat berat', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                    Text(
+                      '0 · Tenang',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                    Text(
+                      '10 · Sangat berat',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -215,18 +256,32 @@ class _RatingPage extends StatelessWidget {
                     _Chip('Sebelum ${before!.round()}'),
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 8),
-                      child: Icon(Icons.arrow_forward, size: 16, color: AppColors.sageDeep),
+                      child: Icon(
+                        Icons.arrow_forward,
+                        size: 16,
+                        color: AppColors.sageDeep,
+                      ),
                     ),
                     _Chip('Sesudah ${value.round()}'),
                   ],
                 ),
                 const SizedBox(height: 12),
-                Text(_feedback, style: const TextStyle(fontSize: 13.5, height: 1.5, color: AppColors.textBody)),
+                Text(
+                  _feedback,
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    height: 1.5,
+                    color: AppColors.textBody,
+                  ),
+                ),
                 if (answerCount > 0) ...[
                   const SizedBox(height: 8),
                   Text(
                     '$answerCount catatan tersimpan dari sesi ini.',
-                    style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted),
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      color: AppColors.textMuted,
+                    ),
                   ),
                 ],
               ],
@@ -246,12 +301,20 @@ class _RatingPage extends StatelessWidget {
               'Perasaanmu masih terasa sangat berat. Kamu tidak harus melaluinya sendirian. '
               'Pertimbangkan berbicara dengan orang tepercaya atau tenaga profesional, '
               'dan jika merasa tidak aman, hubungi layanan darurat atau layanan kesehatan jiwa (119 ext. 8).',
-              style: TextStyle(fontSize: 13, height: 1.5, color: Color(0xFF6B5428)),
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.5,
+                color: Color(0xFF6B5428),
+              ),
             ),
           ),
         ],
         const SizedBox(height: 24),
-        FilledButton(style: primaryButtonStyle(), onPressed: onPressed, child: Text(buttonLabel)),
+        FilledButton(
+          style: primaryButtonStyle(),
+          onPressed: onPressed,
+          child: Text(buttonLabel),
+        ),
       ],
     );
   }
@@ -265,10 +328,17 @@ class _Chip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Text(
         text,
-        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.sageDeep),
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: AppColors.sageDeep,
+        ),
       ),
     );
   }
@@ -285,7 +355,8 @@ class _BreathingRunner extends StatefulWidget {
   State<_BreathingRunner> createState() => _BreathingRunnerState();
 }
 
-class _BreathingRunnerState extends State<_BreathingRunner> with SingleTickerProviderStateMixin {
+class _BreathingRunnerState extends State<_BreathingRunner>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _c;
   int _phase = 0;
   int _cycle = 0;
@@ -297,10 +368,13 @@ class _BreathingRunnerState extends State<_BreathingRunner> with SingleTickerPro
   @override
   void initState() {
     super.initState();
-    _c = AnimationController(vsync: this, duration: Duration(seconds: _cur.seconds))
-      ..addStatusListener((s) {
-        if (s == AnimationStatus.completed) _next();
-      });
+    _c =
+        AnimationController(
+          vsync: this,
+          duration: Duration(seconds: _cur.seconds),
+        )..addStatusListener((s) {
+          if (s == AnimationStatus.completed) _next();
+        });
   }
 
   void _next() {
@@ -356,7 +430,8 @@ class _BreathingRunnerState extends State<_BreathingRunner> with SingleTickerPro
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
-              value: (_cycle + (_phase / _phases.length)) / widget.exercise.cycles,
+              value:
+                  (_cycle + (_phase / _phases.length)) / widget.exercise.cycles,
               minHeight: 6,
               backgroundColor: AppColors.sagePale,
               valueColor: AlwaysStoppedAnimation(accent),
@@ -366,10 +441,13 @@ class _BreathingRunnerState extends State<_BreathingRunner> with SingleTickerPro
             child: Center(
               child: AnimatedBuilder(
                 animation: _c,
-                builder: (_, __) {
+                builder: (_, _) {
                   final t = Curves.easeInOut.transform(_c.value);
-                  final scale = _cur.scaleFrom + (_cur.scaleTo - _cur.scaleFrom) * t;
-                  final remaining = (_cur.seconds * (1 - _c.value)).ceil().clamp(1, _cur.seconds);
+                  final scale =
+                      _cur.scaleFrom + (_cur.scaleTo - _cur.scaleFrom) * t;
+                  final remaining = (_cur.seconds * (1 - _c.value))
+                      .ceil()
+                      .clamp(1, _cur.seconds);
                   return SizedBox(
                     width: 280,
                     height: 280,
@@ -379,12 +457,18 @@ class _BreathingRunnerState extends State<_BreathingRunner> with SingleTickerPro
                         Container(
                           width: 280 * scale,
                           height: 280 * scale,
-                          decoration: BoxDecoration(shape: BoxShape.circle, color: accent.withAlpha(36)),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: accent.withAlpha(36),
+                          ),
                         ),
                         Container(
                           width: 210 * scale,
                           height: 210 * scale,
-                          decoration: BoxDecoration(shape: BoxShape.circle, color: accent.withAlpha(70)),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: accent.withAlpha(70),
+                          ),
                         ),
                         Column(
                           mainAxisSize: MainAxisSize.min,
@@ -416,15 +500,23 @@ class _BreathingRunnerState extends State<_BreathingRunner> with SingleTickerPro
             ),
           ),
           Text(
-            started ? _cur.hint : 'Duduk nyaman, bahu rileks. Ketuk Mulai saat siap.',
+            started
+                ? _cur.hint
+                : 'Duduk nyaman, bahu rileks. Ketuk Mulai saat siap.',
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 14.5, height: 1.5, color: AppColors.textBody),
+            style: const TextStyle(
+              fontSize: 14.5,
+              height: 1.5,
+              color: AppColors.textBody,
+            ),
           ),
           const SizedBox(height: 20),
           FilledButton.icon(
             style: primaryButtonStyle(),
             onPressed: _toggle,
-            icon: Icon(_running ? Icons.pause_rounded : Icons.play_arrow_rounded),
+            icon: Icon(
+              _running ? Icons.pause_rounded : Icons.play_arrow_rounded,
+            ),
             label: Text(_running ? 'Jeda' : (started ? 'Lanjutkan' : 'Mulai')),
           ),
         ],
@@ -446,8 +538,9 @@ class _StepRunner extends StatefulWidget {
 
 class _StepRunnerState extends State<_StepRunner> {
   int _i = 0;
-  late final List<TextEditingController> _ctrls =
-      widget.exercise.steps.map((_) => TextEditingController()).toList();
+  late final List<TextEditingController> _ctrls = widget.exercise.steps
+      .map((_) => TextEditingController())
+      .toList();
 
   List<ExerciseStep> get _steps => widget.exercise.steps;
 
@@ -464,7 +557,9 @@ class _StepRunnerState extends State<_StepRunner> {
     if (_i == _steps.length - 1) {
       final answers = <String, String>{};
       for (int k = 0; k < _steps.length; k++) {
-        if (_steps[k].inputHint != null) answers[_steps[k].title] = _ctrls[k].text;
+        if (_steps[k].inputHint != null) {
+          answers[_steps[k].title] = _ctrls[k].text;
+        }
       }
       widget.onDone(answers);
     } else {
@@ -486,7 +581,10 @@ class _StepRunnerState extends State<_StepRunner> {
             children: [
               Text(
                 'Langkah ${_i + 1} dari ${_steps.length}',
-                style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textMuted,
+                ),
               ),
             ],
           ),
@@ -513,7 +611,11 @@ class _StepRunnerState extends State<_StepRunner> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      IconTile(icon: widget.exercise.icon, accent: accent, size: 48),
+                      IconTile(
+                        icon: widget.exercise.icon,
+                        accent: accent,
+                        size: 48,
+                      ),
                       const SizedBox(height: 18),
                       Text(
                         step.title,
@@ -527,7 +629,11 @@ class _StepRunnerState extends State<_StepRunner> {
                       const SizedBox(height: 10),
                       Text(
                         step.body,
-                        style: const TextStyle(fontSize: 15, height: 1.6, color: AppColors.textBody),
+                        style: const TextStyle(
+                          fontSize: 15,
+                          height: 1.6,
+                          color: AppColors.textBody,
+                        ),
                       ),
                       if (step.inputHint != null) ...[
                         const SizedBox(height: 18),
@@ -538,7 +644,9 @@ class _StepRunnerState extends State<_StepRunner> {
                           textCapitalization: TextCapitalization.sentences,
                           decoration: InputDecoration(
                             hintText: step.inputHint,
-                            hintStyle: const TextStyle(color: AppColors.textLight),
+                            hintStyle: const TextStyle(
+                              color: AppColors.textLight,
+                            ),
                             filled: true,
                             fillColor: AppColors.sagePale.withAlpha(120),
                             border: OutlineInputBorder(
@@ -547,7 +655,10 @@ class _StepRunnerState extends State<_StepRunner> {
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(18),
-                              borderSide: const BorderSide(color: AppColors.sage, width: 1.5),
+                              borderSide: const BorderSide(
+                                color: AppColors.sage,
+                                width: 1.5,
+                              ),
                             ),
                           ),
                         ),
@@ -569,7 +680,9 @@ class _StepRunnerState extends State<_StepRunner> {
                       minimumSize: const Size.fromHeight(54),
                       foregroundColor: AppColors.sageDeep,
                       side: const BorderSide(color: AppColors.border),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
                     ),
                     onPressed: () => setState(() => _i--),
                     child: const Text('Kembali'),

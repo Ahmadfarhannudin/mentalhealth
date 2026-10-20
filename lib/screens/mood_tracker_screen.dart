@@ -1,15 +1,13 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
+
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text.dart';
-import '../data/models.dart';
+import '../core/ui/components.dart';
 import 'scan_expression_screen.dart';
 
-/// Satu catatan suasana hati (sementara disimpan di memori).
-/// Ganti dengan model/database milikmu bila sudah ada.
 class MoodEntry {
-  final DateTime date; // hanya tanggal (tanpa jam)
-  final int level; // 1..5, sesuai AppConstants.moodOptions
+  final DateTime date;
+  final int level;
   final List<String> tags;
   final String note;
 
@@ -22,1795 +20,2379 @@ class MoodEntry {
 }
 
 class MoodTrackerScreen extends StatefulWidget {
-  /// Nama pengguna untuk ucapan di bagian atas.
   final String userName;
-
-  /// Callback navigasi tab dari parent (HomeScreen).
   final ValueChanged<int>? onTabChanged;
 
-  const MoodTrackerScreen({super.key, this.userName = 'Teman', this.onTabChanged});
+  const MoodTrackerScreen({
+    super.key,
+    this.userName = 'Teman',
+    this.onTabChanged,
+  });
 
   @override
   State<MoodTrackerScreen> createState() => _MoodTrackerScreenState();
 }
 
 class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
-  /// Ubah ke false untuk melihat tampilan keadaan kosong.
-  static const bool _seedSampleData = true;
-
-  /// Minimal jumlah catatan agar grafik & ringkasan ditampilkan.
-  static const int _minEntries = 3;
-
-  static const _dayNames = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
-  static const _monthNames = [
-    'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+  static const _moods = [
+    _MoodData(
+      level: 1,
+      label: 'Berat',
+      icon: Icons.sentiment_very_dissatisfied_rounded,
+      color: AppColors.moodBad,
+      tint: AppColors.moodBadTint,
+    ),
+    _MoodData(
+      level: 2,
+      label: 'Lelah',
+      icon: Icons.sentiment_dissatisfied_rounded,
+      color: AppColors.moodLow,
+      tint: AppColors.moodLowTint,
+    ),
+    _MoodData(
+      level: 3,
+      label: 'Biasa',
+      icon: Icons.sentiment_neutral_rounded,
+      color: AppColors.moodOkay,
+      tint: AppColors.moodOkayTint,
+    ),
+    _MoodData(
+      level: 4,
+      label: 'Baik',
+      icon: Icons.sentiment_satisfied_rounded,
+      color: AppColors.moodGood,
+      tint: AppColors.moodGoodTint,
+    ),
+    _MoodData(
+      level: 5,
+      label: 'Tenang',
+      icon: Icons.sentiment_very_satisfied_rounded,
+      color: AppColors.moodGreat,
+      tint: AppColors.moodGreatTint,
+    ),
   ];
 
-  int _selectedMood = 5;
-  bool _isEditing = false;
   final TextEditingController _noteController = TextEditingController();
-  final List<String> _tags = ['Pekerjaan', 'Keluarga', 'Tidur', 'Kesehatan', 'Hubungan', 'Sosial'];
-  final Set<String> _selectedTags = {'Tidur'};
-  late List<MoodEntry> _entries;
-
+  final Set<String> _selectedTags = {};
+  final List<MoodEntry> _entries = [];
+  final PageController _insightPageController = PageController(
+    viewportFraction: 0.92,
+  );
+  int _selectedMood = 3;
+  int _activeInsightPage = 0;
+  bool _isEditing = false;
   @override
   void initState() {
     super.initState();
-    _entries = _seedSampleData ? _sampleEntries() : [];
+    _loadDummyData();
+  }
+
+  void _loadDummyData() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final raw = [
+      (0, 4, ['Pekerjaan', 'Tidur'], 'Hari yang cukup produktif.'),
+      (1, 3, ['Keluarga'], 'Ngobrol lama sama keluarga.'),
+      (2, 5, ['Tidur', 'Kesehatan'], 'Tidur lebih awal, badan terasa segar.'),
+      (3, 4, ['Pekerjaan'], 'Deadline selesai tepat waktu.'),
+      (4, 2, ['Pekerjaan', 'Tidur'], 'Begadang, badan terasa berat.'),
+      (5, 3, ['Sosial'], 'Kopi sore sama teman lama.'),
+      (6, 4, ['Kesehatan'], 'Olahraga pagi, mood membaik.'),
+      (7, 3, ['Pekerjaan'], 'Meeting panjang, cukup melelahkan.'),
+      (8, 1, ['Hubungan', 'Tidur'], 'Hari yang terasa sangat berat.'),
+      (9, 2, ['Kesehatan'], 'Kurang enak badan sejak kemarin.'),
+      (10, 3, ['Keluarga', 'Sosial'], 'Makan malam ramai-ramai.'),
+      (11, 4, ['Tidur'], 'Tidur cukup, bangun segar.'),
+      (12, 5, ['Kesehatan', 'Sosial'], 'Hari yang menyenangkan dan tenang.'),
+      (13, 4, ['Pekerjaan'], 'Proyek baru dimulai dengan baik.'),
+      (14, 3, ['Hubungan'], 'Ada salah paham kecil, tapi oke.'),
+      (16, 2, ['Tidur', 'Pekerjaan'], 'Tekanan kerja cukup tinggi.'),
+      (17, 3, ['Sosial'], 'Nonton bareng teman.'),
+      (18, 4, ['Kesehatan'], 'Jalan pagi, udara segar.'),
+      (19, 5, ['Keluarga', 'Tidur'], 'Weekend tenang bersama keluarga.'),
+      (20, 4, ['Pekerjaan'], 'Ide baru muncul, semangat lagi.'),
+      (21, 3, ['Hubungan', 'Sosial'], 'Hangout sore, cukup menyenangkan.'),
+      (22, 2, ['Tidur'], 'Susah tidur malam, badan kurang fit.'),
+      (23, 3, ['Pekerjaan'], 'Rutinitas biasa, tidak ada yang spesial.'),
+      (24, 4, ['Kesehatan', 'Tidur'], 'Istirahat cukup, tubuh lebih ringan.'),
+      (25, 5, ['Sosial', 'Keluarga'], 'Reuni kecil, sangat menyenangkan.'),
+      (26, 4, ['Pekerjaan'], 'Presentasi berjalan lancar.'),
+      (27, 3, ['Tidur'], 'Tidur tidak nyenyak.'),
+      (28, 2, ['Hubungan'], 'Perasaan campur aduk hari ini.'),
+      (29, 4, ['Kesehatan'], 'Mulai rutin olahraga lagi.'),
+    ];
+
+    for (final (daysAgo, level, tags, note) in raw) {
+      _entries.add(
+        MoodEntry(
+          date: DateTime(today.year, today.month, today.day - daysAgo),
+          level: level,
+          tags: List.unmodifiable(tags),
+          note: note,
+        ),
+      );
+    }
+  }
+
+  DateTime get _today {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day);
+  }
+
+  MoodEntry? get _todayEntry {
+    for (final entry in _entries.reversed) {
+      if (entry.date == _today) return entry;
+    }
+    return null;
   }
 
   @override
   void dispose() {
     _noteController.dispose();
+    _insightPageController.dispose();
     super.dispose();
   }
 
-  // ───────────────────────── Data helpers ─────────────────────────
-
-  DateTime _today() {
-    final n = DateTime.now();
-    return DateTime(n.year, n.month, n.day);
-  }
-
-  List<MoodEntry> _sampleEntries() {
-    final t = _today();
-    final levels = [4, 3, 5, 2, 3, 4, 4, 1, 3, 5, 4, 3];
-    final days = [1, 2, 3, 4, 6, 7, 9, 11, 13, 15, 18, 20];
-    final tagSets = [
-      ['Tidur', 'Pekerjaan'], ['Pekerjaan'], ['Keluarga'], ['Pekerjaan', 'Tidur'],
-      ['Sosial'], ['Tidur'], ['Kesehatan'], ['Pekerjaan', 'Hubungan'],
-      ['Tidur'], ['Keluarga', 'Sosial'], ['Pekerjaan'], ['Tidur'],
-    ];
-    return List.generate(levels.length, (i) {
-      return MoodEntry(
-        date: t.subtract(Duration(days: days[i] - 1)),
-        level: levels[i],
-        tags: tagSets[i],
-      );
-    });
-  }
-
-  /// Emoji ekspresi wajah per level mood (1 = paling berat, 5 = paling tenang).
-  static const Map<int, String> _moodEmojis = {
-    5: '😊',
-    4: '🙂',
-    3: '😐',
-    2: '😔',
-    1: '😢',
-  };
-
-  String _emoji(dynamic level) => _moodEmojis[level] ?? '🙂';
-
   String get _greeting {
-    final h = DateTime.now().hour;
-    if (h >= 4 && h < 11) return 'Selamat pagi';
-    if (h >= 11 && h < 15) return 'Selamat siang';
-    if (h >= 15 && h < 18) return 'Selamat sore';
+    final hour = DateTime.now().hour;
+    if (hour < 11) return 'Selamat pagi';
+    if (hour < 15) return 'Selamat siang';
+    if (hour < 18) return 'Selamat sore';
     return 'Selamat malam';
   }
 
   String get _dateLabel {
-    final n = DateTime.now();
-    const days = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
-    return '${days[n.weekday - 1]}, ${n.day} ${_monthNames[n.month - 1]} ${n.year}';
+    const weekdays = [
+      'Senin',
+      'Selasa',
+      'Rabu',
+      'Kamis',
+      'Jumat',
+      'Sabtu',
+      'Minggu',
+    ];
+    const months = [
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
+    ];
+    final now = DateTime.now();
+    return '${weekdays[now.weekday - 1]}, ${now.day} ${months[now.month - 1]}';
   }
 
-  Map<String, dynamic> _moodByLevel(int level) {
-    return AppConstants.moodOptions.firstWhere(
-      (m) => m['level'] == level,
-      orElse: () => AppConstants.moodOptions.first,
-    );
-  }
+  _MoodData _moodData(int level) =>
+      _moods.firstWhere((mood) => mood.level == level);
 
-  List<MoodEntry> get _monthEntries {
-    final t = _today();
-    return _entries.where((e) => e.date.year == t.year && e.date.month == t.month).toList();
-  }
-
-  /// Nilai mood 7 hari terakhir (null = tidak ada catatan).
-  List<int?> get _weekValues {
-    final t = _today();
-    return List.generate(7, (i) {
-      final d = t.subtract(Duration(days: 6 - i));
-      final match = _entries.where((e) => e.date == d);
-      return match.isEmpty ? null : match.last.level;
+  void _startEditingEntry(MoodEntry entry) {
+    setState(() {
+      _isEditing = true;
+      _selectedMood = entry.level;
+      _selectedTags
+        ..clear()
+        ..addAll(entry.tags);
+      _noteController.text = entry.note;
     });
   }
 
-  List<String> get _weekLabels {
-    final t = _today();
-    return List.generate(7, (i) => _dayNames[t.subtract(Duration(days: 6 - i)).weekday - 1]);
-  }
-
-  int get _streak {
-    final dates = _entries.map((e) => e.date).toSet();
-    var d = _today();
-    if (!dates.contains(d)) d = d.subtract(const Duration(days: 1));
-    var count = 0;
-    while (dates.contains(d)) {
-      count++;
-      d = d.subtract(const Duration(days: 1));
+  void _beginEditing() {
+    final entry = _todayEntry;
+    if (entry != null) {
+      _startEditingEntry(entry);
+      return;
     }
-    return count;
-  }
-
-  void _save() {
-    final t = _today();
     setState(() {
-      _entries.removeWhere((e) => e.date == t);
-      _entries.add(MoodEntry(
-        date: t,
-        level: _selectedMood,
-        tags: _selectedTags.toList(),
-        note: _noteController.text.trim(),
-      ));
-      _noteController.clear();
-      _isEditing = false;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Catatan suasana hati tersimpan dengan tenang.'),
-        backgroundColor: AppColors.sage,
-      ),
-    );
-  }
-
-  /// Hapus catatan hari ini dan kembalikan form ke kondisi awal.
-  void _deleteToday() {
-    final t = _today();
-    setState(() {
-      _entries.removeWhere((e) => e.date == t);
-      _isEditing = false;
-      _selectedMood = 5;
+      _isEditing = true;
+      _selectedMood = 3;
       _selectedTags.clear();
       _noteController.clear();
     });
+  }
+
+  void _deleteEntry(MoodEntry entry) {
+    setState(() {
+      _entries.removeWhere((item) => identical(item, entry));
+    });
+
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Catatan hari ini dihapus.'),
-        backgroundColor: AppColors.sage,
+      SnackBar(
+        content: Text('Check-in ${_entryLabel(entry)} dihapus.'),
+        action: SnackBarAction(
+          label: 'Batal',
+          onPressed: () => setState(() {
+            if (!_entries.contains(entry)) _entries.add(entry);
+          }),
+        ),
       ),
     );
   }
 
-  /// Buka kamera untuk mendeteksi ekspresi wajah & otomatis isi mood.
-  Future<void> _handleScanMood() async {
+  String _entryLabel(MoodEntry entry) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    if (entry.date == today) return 'hari ini';
+    final difference = today.difference(entry.date).inDays;
+    if (difference == 1) return 'kemarin';
+    return '$difference hari lalu';
+  }
+
+  void _saveCheckIn() {
+    final entry = MoodEntry(
+      date: _today,
+      level: _selectedMood,
+      tags: List.unmodifiable(_selectedTags),
+      note: _noteController.text.trim(),
+    );
+
+    setState(() {
+      _entries.removeWhere((item) => item.date == _today);
+      _entries.add(entry);
+      _isEditing = false;
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Check-in hari ini tersimpan.')),
+    );
+  }
+
+  Future<void> _scanExpression() async {
     final result = await Navigator.push<ExpressionResult>(
       context,
-      MaterialPageRoute(
-        builder: (context) => const ScanExpressionScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const ScanExpressionScreen()),
     );
 
-    if (result != null && mounted) {
-      setState(() {
-        _selectedMood = result.moodLevel;
-        if (!_selectedTags.contains('Kesehatan')) {
-          _selectedTags.add('Kesehatan');
-        }
-        _noteController.text = 'Deteksi otomatis: ${result.label} ${result.emoji}';
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Mood diatur otomatis ke "${result.label} ${result.emoji}" dari hasil scan.'),
-          backgroundColor: AppColors.sage,
-        ),
-      );
-    }
-  }
-
-  /// Muat catatan hari ini ke form agar bisa diperbarui.
-  void _startEditing() {
-    final e = _entries.firstWhere((e) => e.date == _today());
+    if (!mounted || result == null) return;
     setState(() {
+      _selectedMood = result.moodLevel;
+      _noteController.text = 'Hasil scan: ${result.label}';
       _isEditing = true;
-      _selectedMood = e.level;
-      _selectedTags
-        ..clear()
-        ..addAll(e.tags);
-      _noteController.text = e.note;
     });
   }
 
-  // ───────────────────────── Build ─────────────────────────
+  void _toggleTag(String tag) {
+    setState(() {
+      if (_selectedTags.contains(tag)) {
+        _selectedTags.remove(tag);
+      } else {
+        _selectedTags.add(tag);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final hasLoggedToday = _entries.any((e) => e.date == _today());
+    final todayEntry = _todayEntry;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildGreetingHeader(hasLoggedToday),
-            const SizedBox(height: 20),
-            if (_entries.isEmpty) ...[
-              _buildEmptyStateCard(),
-              const SizedBox(height: 20),
-            ] else ...[
-              _buildQuickStatsRow(),
-              const SizedBox(height: 20),
-              _buildQuickActionsRow(),
-              const SizedBox(height: 28),
-            ],
-            _buildCheckInCard(showSummary: hasLoggedToday && !_isEditing),
-            const SizedBox(height: 28),
-            _sectionHeader('Wawasan untukmu', 'Gambaran dari catatanmu sendiri'),
-            const SizedBox(height: 14),
-            _buildForestCard(),
-            const SizedBox(height: 14),
-            _buildWeekChartCard(),
-            const SizedBox(height: 14),
-            _buildTriggersCard(),
-            const SizedBox(height: 20),
-            _buildDisclaimer(),
-          ],
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(
+          Space.page,
+          Space.lg,
+          Space.page,
+          Space.xxl,
         ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyStateCard() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.borderLight),
-      ),
-      child: Column(
         children: [
-          Icon(Icons.spa_outlined, size: 48, color: AppColors.sage),
-          const SizedBox(height: 14),
-          const Text(
-            'Belum ada catatan',
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textDark,
-            ),
+          _PageIntro(
+            greeting: _greeting,
+            name: widget.userName.trim().isEmpty
+                ? 'Teman'
+                : widget.userName.trim(),
+            date: _dateLabel,
+            hasEntry: todayEntry != null,
           ),
-          const SizedBox(height: 6),
-          const Text(
-            'Mulai hari ini dengan mencatat perasaanmu. Tidak ada yang terlambat.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              height: 1.5,
-              color: AppColors.textBody,
+          const SizedBox(height: Space.xl),
+          if (todayEntry == null || _isEditing)
+            _CheckInForm(
+              selectedMood: _selectedMood,
+              selectedTags: _selectedTags,
+              noteController: _noteController,
+              isEditing: _isEditing,
+              onMoodChanged: (level) => setState(() => _selectedMood = level),
+              onTagToggled: _toggleTag,
+              onScan: _scanExpression,
+              onSave: _saveCheckIn,
+            )
+          else
+            _TodaySummary(
+              entry: todayEntry,
+              mood: _moodData(todayEntry.level),
+              onEdit: _beginEditing,
             ),
+          const SizedBox(height: Space.lg),
+          _InspirationCarousel(
+            pageController: _insightPageController,
+            activePage: _activeInsightPage,
+            onPageChanged: (page) => setState(() => _activeInsightPage = page),
+          ),
+          const SizedBox(height: Space.xl),
+          _SectionTitle(
+            title: 'Progres mingguan',
+            subtitle: _entries.isEmpty
+                ? 'Progres muncul setelah kamu mulai check-in.'
+                : 'Mood yang tercatat dalam tujuh hari terakhir.',
+          ),
+          const SizedBox(height: Space.md),
+          _WeeklyChartCard(
+            entries: _entries,
+            today: _today,
+            moodData: _moodData,
+          ),
+          const SizedBox(height: Space.lg),
+          _FrequensiCard(entries: _entries, moodData: _moodData),
+          const SizedBox(height: Space.xl),
+          _SectionTitle(
+            title: 'Riwayat check-in',
+            subtitle: _entries.isEmpty
+                ? 'Catatanmu akan muncul di sini setelah check-in.'
+                : '${_entries.length} catatan tersimpan di perangkat ini.',
+          ),
+          const SizedBox(height: Space.md),
+          if (_entries.isEmpty)
+            const QuietEmptyState(
+              icon: Icons.calendar_today_outlined,
+              title: 'Belum ada riwayat',
+              message: 'Mulai dari satu check-in. Tidak perlu menulis panjang, cukup pilih mood yang paling mendekati.',
+            )
+          else
+            _HistoryCard(
+              entries: _entries,
+              moodData: _moodData,
+              onEditEntry: _startEditingEntry,
+              onDeleteEntry: _deleteEntry,
+            ),
+          const SizedBox(height: Space.xl),
+          const InfoNote(
+            icon: Icons.privacy_tip_outlined,
+            message: 'Check-in membantu melihat pola perasaanmu, bukan memberi diagnosis. Jika terasa sangat berat atau tidak aman, hubungi orang tepercaya atau tenaga profesional.',
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildQuickStatsRow() {
-    final streak = _streak;
-    final monthCount = _monthEntries.length;
-    final avgMood = _monthEntries.isNotEmpty
-        ? (_monthEntries.fold(0, (sum, e) => sum + e.level) / _monthEntries.length).toStringAsFixed(1)
-        : '0.0';
+// ─────────────────────────────────────────────
+// Data model
+// ─────────────────────────────────────────────
 
-    return Row(
-      children: [
-        Expanded(
-          child: _quickStatCard(
-            icon: Icons.wb_sunny_rounded,
-            label: 'Konsisten',
-            value: streak == 0 ? 'Mulai lagi' : '$streak hari',
-            color: _Nature.sandTint,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _quickStatCard(
-            icon: Icons.forest_rounded,
-            label: 'Bulan ini',
-            value: monthCount == 0 ? 'Belum ada' : '$monthCount catatan',
-            color: _Nature.mintTint,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _quickStatCard(
-            icon: Icons.spa_rounded,
-            label: 'Rata-rata',
-            value: avgMood,
-            color: _Nature.lakeTint,
-          ),
-        ),
-      ],
-    );
+class _MoodData {
+  final int level;
+  final String label;
+  final IconData icon;
+  final Color color;
+  final Color tint;
+
+  const _MoodData({
+    required this.level,
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.tint,
+  });
+}
+
+const _moodOptions = [
+  _MoodData(
+    level: 1,
+    label: 'Berat',
+    icon: Icons.sentiment_very_dissatisfied_rounded,
+    color: AppColors.moodBad,
+    tint: AppColors.moodBadTint,
+  ),
+  _MoodData(
+    level: 2,
+    label: 'Lelah',
+    icon: Icons.sentiment_dissatisfied_rounded,
+    color: AppColors.moodLow,
+    tint: AppColors.moodLowTint,
+  ),
+  _MoodData(
+    level: 3,
+    label: 'Biasa',
+    icon: Icons.sentiment_neutral_rounded,
+    color: AppColors.moodOkay,
+    tint: AppColors.moodOkayTint,
+  ),
+  _MoodData(
+    level: 4,
+    label: 'Baik',
+    icon: Icons.sentiment_satisfied_rounded,
+    color: AppColors.moodGood,
+    tint: AppColors.moodGoodTint,
+  ),
+  _MoodData(
+    level: 5,
+    label: 'Tenang',
+    icon: Icons.sentiment_very_satisfied_rounded,
+    color: AppColors.moodGreat,
+    tint: AppColors.moodGreatTint,
+  ),
+];
+
+const _tagOptions = [
+  'Pekerjaan',
+  'Keluarga',
+  'Tidur',
+  'Kesehatan',
+  'Hubungan',
+  'Sosial',
+];
+
+// ─────────────────────────────────────────────
+// Header hero
+// ─────────────────────────────────────────────
+
+class _PageIntro extends StatelessWidget {
+  final String greeting;
+  final String name;
+  final String date;
+  final bool hasEntry;
+
+  const _PageIntro({
+    required this.greeting,
+    required this.name,
+    required this.date,
+    required this.hasEntry,
+  });
+
+  IconData get _timeIcon {
+    final hour = DateTime.now().hour;
+    if (hour < 11) return Icons.wb_sunny_rounded;
+    if (hour < 15) return Icons.light_mode_rounded;
+    if (hour < 18) return Icons.wb_twilight_rounded;
+    return Icons.nights_stay_rounded;
   }
 
-  Widget _quickStatCard({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(16),
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      container: true,
+      label:
+          '$greeting, $name. $date. ${hasEntry ? 'Check-in hari ini sudah tersimpan' : 'Belum check-in hari ini'}',
+      child: ExcludeSemantics(
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(28),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF2D6A4F), Color(0xFF1B4332), Color(0xFF081C15)],
+              stops: [0.0, 0.55, 1.0],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF2D6A4F).withValues(alpha: 0.45),
+                blurRadius: 32,
+                spreadRadius: -4,
+                offset: const Offset(0, 16),
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.25),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(28),
+            child: Stack(
+              children: [
+                // ── Lapisan kaca buram ──
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Colors.white.withValues(alpha: 0.08),
+                          Colors.white.withValues(alpha: 0.02),
+                          Colors.transparent,
+                        ],
+                        stops: const [0.0, 0.4, 1.0],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // ── Orb besar kiri atas ──
+                Positioned(
+                  left: -60,
+                  top: -60,
+                  child: Container(
+                    width: 220,
+                    height: 220,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          const Color(0xFF52B788).withValues(alpha: 0.35),
+                          const Color(0xFF52B788).withValues(alpha: 0.0),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // ── Orb kecil kanan bawah ──
+                Positioned(
+                  right: -30,
+                  bottom: -40,
+                  child: Container(
+                    width: 160,
+                    height: 160,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          const Color(0xFF74C69D).withValues(alpha: 0.2),
+                          const Color(0xFF74C69D).withValues(alpha: 0.0),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // ── Garis highlight kaca atas ──
+                Positioned(
+                  top: 0,
+                  left: 24,
+                  right: 24,
+                  child: Container(
+                    height: 1,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.transparent,
+                          Colors.white.withValues(alpha: 0.35),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // ── Konten utama ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    Space.xl,
+                    Space.xl,
+                    Space.xl,
+                    Space.lg,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Baris atas: pill tanggal + ikon waktu
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.10),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.18),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.calendar_today_rounded,
+                                  size: 12,
+                                  color: Colors.white.withValues(alpha: 0.8),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  date,
+                                  style: AppText.caption.copyWith(
+                                    color: Colors.white.withValues(alpha: 0.9),
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Spacer(),
+
+                          // Ikon waktu — kaca bulat
+                          Container(
+                            width: 46,
+                            height: 46,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white.withValues(alpha: 0.10),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.20),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.white.withValues(alpha: 0.08),
+                                  blurRadius: 12,
+                                  spreadRadius: 2,
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              _timeIcon,
+                              color: const Color(0xFFB7E4C7),
+                              size: 22,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: Space.xl),
+
+                      // Sapaan
+                      Text(
+                        '$greeting,',
+                        style: AppText.bodyLarge.copyWith(
+                          color: const Color(0xFF95D5B2),
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.displayLarge.copyWith(
+                          color: Colors.white,
+                          height: 1.08,
+                          letterSpacing: -0.5,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withValues(alpha: 0.3),
+                              blurRadius: 12,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: Space.lg),
+
+                      // Status check-in — panel kaca
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: Space.md,
+                          vertical: 13,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.14),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.10),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: hasEntry
+                                    ? const Color(0xFF52B788)
+                                          .withValues(alpha: 0.25)
+                                    : Colors.white.withValues(alpha: 0.10),
+                                border: Border.all(
+                                  color: hasEntry
+                                      ? const Color(0xFF74C69D)
+                                            .withValues(alpha: 0.5)
+                                      : Colors.white.withValues(alpha: 0.15),
+                                ),
+                              ),
+                              child: Icon(
+                                hasEntry
+                                    ? Icons.check_rounded
+                                    : Icons.favorite_border_rounded,
+                                color: hasEntry
+                                    ? const Color(0xFFB7E4C7)
+                                    : Colors.white.withValues(alpha: 0.7),
+                                size: 16,
+                              ),
+                            ),
+                            const SizedBox(width: Space.sm),
+                            Expanded(
+                              child: Text(
+                                hasEntry
+                                    ? 'Check-in hari ini sudah tersimpan. Kamu bisa memperbaruinya kapan saja.'
+                                    : 'Luangkan satu menit untuk menyadari apa yang sedang kamu rasakan.',
+                                style: AppText.bodySmall.copyWith(
+                                  color: Colors.white.withValues(alpha: 0.85),
+                                  height: 1.45,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+// Check-in form
+// ─────────────────────────────────────────────
+
+class _CheckInForm extends StatelessWidget {
+  final int selectedMood;
+  final Set<String> selectedTags;
+  final TextEditingController noteController;
+  final bool isEditing;
+
+  final ValueChanged<int> onMoodChanged;
+  final ValueChanged<String> onTagToggled;
+  final VoidCallback onScan;
+  final VoidCallback onSave;
+
+  const _CheckInForm({
+    required this.selectedMood,
+    required this.selectedTags,
+    required this.noteController,
+    required this.isEditing,
+    required this.onMoodChanged,
+    required this.onTagToggled,
+    required this.onScan,
+    required this.onSave,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SoftCard(
+      padding: const EdgeInsets.all(Space.xl),
+      color: AppColors.surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20, color: AppColors.sageDeep),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textDark,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.3,
-              color: AppColors.textDark,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActionsRow() {
-    return Row(
-      children: [
-        Expanded(
-          child: _quickActionButton(
-            icon: Icons.auto_stories_rounded,
-            label: 'Mulai Jurnal',
-            color: AppColors.sage,
-            onTap: () => widget.onTabChanged?.call(1),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _quickActionButton(
-            icon: Icons.camera_alt_rounded,
-            label: 'Scan Ekspresi',
-            color: AppColors.terracotta,
-            onTap: _handleScanMood,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _quickActionButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.borderLight),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 20, color: color),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: color,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ───────────────────────── Greeting (nuansa alam minimalis) ─────────────────────────
-
-  Widget _buildGreetingHeader(bool hasLoggedToday) {
-    final name = widget.userName.trim().isEmpty
-        ? 'Teman'
-        : widget.userName.trim();
-
-    final subtitle = hasLoggedToday
-        ? 'Perasaanmu hari ini sudah tercatat. Terima kasih sudah meluangkan waktu untuk dirimu.'
-        : 'Luangkan satu menit untuk menyadari apa yang kamu rasakan hari ini.';
-
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF0F4E9),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: const Color(0xFFC9D9BE),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF5F7D55).withValues(alpha: 0.09),
-            blurRadius: 18,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(23),
-        child: Stack(
-          children: [
-            // Ilustrasi bukit hanya di tepi bawah, tidak menimpa konten.
-            const Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: 20,
-              child: IgnorePointer(
-                child: CustomPaint(
-                  painter: _GreetingNaturePainter(),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Check-in sekarang', style: AppText.titleLarge),
+                    SizedBox(height: Space.xs),
+                    Text(
+                      'Pilih yang paling mendekati. Tidak ada jawaban benar atau salah.',
+                      style: AppText.bodySmall,
+                    ),
+                  ],
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 17, 16, 27),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _dateLabel,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            height: 1.4,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF607D5D),
-                          ),
+              IconButton(
+                tooltip: 'Gunakan scan ekspresi',
+                onPressed: onScan,
+                icon: const Icon(Icons.center_focus_strong_rounded),
+              ),
+            ],
+          ),
+          const SizedBox(height: Space.xl),
+          const Text('Suasana hati', style: AppText.titleSmall),
+          const SizedBox(height: Space.md),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final itemWidth = (constraints.maxWidth - 32) / 5;
+              return Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _moodOptions
+                    .map(
+                      (mood) => SizedBox(
+                        width: itemWidth,
+                        child: _MoodOption(
+                          mood: mood,
+                          selected: selectedMood == mood.level,
+                          onTap: () => onMoodChanged(mood.level),
                         ),
-                        const SizedBox(height: 10),
-                        Text(
-                          '$_greeting,',
-                          style: const TextStyle(
-                            fontSize: 15,
-                            height: 1.3,
-                            color: Color(0xFF62716B),
-                          ),
-                        ),
-                        const SizedBox(height: 1),
-                        Text(
-                          name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 27,
-                            height: 1.2,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.6,
-                            color: Color(0xFF34433D),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          subtitle,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            height: 1.55,
-                            color: Color(0xFF62716B),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Container(
-                    width: 52,
-                    height: 52,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: const Color(0xFFDCE9D3),
-                      border: Border.all(
-                        color: const Color(0xFF91B185),
-                        width: 1.5,
                       ),
-                    ),
+                    )
+                    .toList(),
+              );
+            },
+          ),
+          const SizedBox(height: Space.xl),
+          const Text('Apa yang paling memengaruhi?', style: AppText.titleSmall),
+          const SizedBox(height: Space.md),
+          Wrap(
+            spacing: Space.sm,
+            runSpacing: Space.sm,
+            children: _tagOptions
+                .map(
+                  (tag) => QuietPill(
+                    label: tag,
+                    selected: selectedTags.contains(tag),
+                    onTap: () => onTagToggled(tag),
+                  ),
+                )
+                .toList(),
+          ),
+          const SizedBox(height: Space.xl),
+          const Text('Catatan singkat', style: AppText.titleSmall),
+          const SizedBox(height: Space.sm),
+          TextField(
+            controller: noteController,
+            minLines: 2,
+            maxLines: 4,
+            maxLength: 280,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              hintText: 'Apa yang ingin kamu ingat dari momen ini?',
+              counterText: '',
+            ),
+          ),
+          const SizedBox(height: Space.lg),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: onSave,
+              child: Text(isEditing ? 'Simpan perubahan' : 'Simpan check-in'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+// Mood option tile
+// ─────────────────────────────────────────────
+
+class _MoodOption extends StatelessWidget {
+  final _MoodData mood;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _MoodOption({
+    required this.mood,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '${mood.label}, ${selected ? 'dipilih' : 'belum dipilih'}',
+      child: Material(
+        color: selected ? mood.tint : AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(
+            color: selected ? mood.color : AppColors.borderLight,
+            width: selected ? 1.6 : 1,
+          ),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 82),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    mood.icon,
+                    size: 26,
+                    color: selected ? mood.color : AppColors.textMuted,
+                  ),
+                  const SizedBox(height: 6),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
                     child: Text(
-                      name.isNotEmpty ? name[0].toUpperCase() : 'T',
-                      style: const TextStyle(
-                        fontSize: 19,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF527452),
+                      mood.label,
+                      style: AppText.caption.copyWith(
+                        color: selected
+                            ? AppColors.textDark
+                            : AppColors.textMuted,
+                        fontWeight: selected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
   }
+}
 
-  // ───────────────────────── Check-in ─────────────────────────
+// ─────────────────────────────────────────────
+// Today summary
+// ─────────────────────────────────────────────
 
-  Widget _buildCheckInCard({required bool showSummary}) {
-    if (showSummary) {
-      return _card(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              children: [
-                Icon(Icons.check_circle_outline, color: AppColors.success),
-                SizedBox(width: 10),
-                Text(
-                  'Sudah tercatat hari ini',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textDark,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Lakukan update kapan pun jika ada perubahan perasaan.',
-              style: AppText.bodyMedium,
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _startEditing,
-                    icon: const Icon(Icons.edit_outlined),
-                    label: const Text('Update'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.surface,
-                      foregroundColor: AppColors.sage,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: const BorderSide(color: AppColors.sageLight),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _showTodayDetails,
-                    icon: const Icon(Icons.visibility_outlined),
-                    label: const Text('Lihat Detail'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.sage,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
-    }
+class _TodaySummary extends StatelessWidget {
+  final MoodEntry entry;
+  final _MoodData mood;
+  final VoidCallback onEdit;
 
-    return _card(
-      padding: const EdgeInsets.all(18),
+  const _TodaySummary({
+    required this.entry,
+    required this.mood,
+    required this.onEdit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SoftCard(
+      padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Bagaimana perasaanmu saat ini?',
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textDark,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text('Tidak ada penilaian di sini. Sadari saja apa yang ada.',
-              style: AppText.bodyMedium),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              for (int i = 0; i < AppConstants.moodOptions.length; i++) ...[
-                if (i > 0) const SizedBox(width: 8),
-                Expanded(child: _moodTile(AppConstants.moodOptions[i])),
-              ],
-            ],
-          ),
-          const SizedBox(height: 22),
-          Text('Apa yang paling memengaruhimu?', style: AppText.titleSmall),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _tags.map((tag) {
-              final isTagSelected = _selectedTags.contains(tag);
-              return FilterChip(
-                label: Text(tag),
-                selected: isTagSelected,
-                onSelected: (selected) {
-                  setState(() {
-                    selected ? _selectedTags.add(tag) : _selectedTags.remove(tag);
-                  });
-                },
-                backgroundColor: AppColors.surface,
-                selectedColor: AppColors.sagePale,
-                labelStyle: TextStyle(
-                  color: isTagSelected ? AppColors.sageDeep : AppColors.textBody,
-                  fontWeight: isTagSelected ? FontWeight.w700 : FontWeight.w500,
-                  fontSize: 13.5,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(color: isTagSelected ? AppColors.sage : AppColors.border),
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 22),
-          Text('Catatan Singkat (opsional)', style: AppText.titleSmall),
-          const SizedBox(height: 10),
-          TextField(
-            controller: _noteController,
-            maxLines: 3,
-            decoration: InputDecoration(
-              hintText: 'Tuliskan sedikit tentang hal yang membuatmu merasa begini...',
-              fillColor: AppColors.surface,
-            ),
-          ),
-          const SizedBox(height: 18),
-          SizedBox(
+          Container(
             width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _save,
-              child: Text(_isEditing ? 'Perbarui Refleksi' : 'Simpan Refleksi'),
+            padding: const EdgeInsets.all(Space.xl),
+            decoration: BoxDecoration(
+              color: mood.tint,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showTodayDetails() {
-    final todayEntry = _entries.firstWhere((e) => e.date == _today());
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(
-          color: AppColors.cream,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Row(
               children: [
-                Text(
-                  'Detail Hari Ini',
-                  style: AppText.titleLarge,
+                Container(
+                  width: 54,
+                  height: 54,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: mood.color.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Icon(mood.icon, color: mood.color, size: 28),
                 ),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close, color: AppColors.textMuted),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Text(_emoji(todayEntry.level), style: const TextStyle(fontSize: 36)),
-                const SizedBox(width: 16),
+                const SizedBox(width: Space.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        _moodByLevel(todayEntry.level)['label'],
-                        style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Dicatat: $_dateLabel',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textMuted,
-                        ),
-                      ),
+                      Text('Check-in hari ini', style: AppText.caption),
+                      const SizedBox(height: 2),
+                      Text(mood.label, style: AppText.titleLarge),
                     ],
                   ),
                 ),
-                SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: CustomPaint(painter: _MoodTreePainter(todayEntry.level)),
+                IconButton(
+                  tooltip: 'Perbarui check-in',
+                  onPressed: onEdit,
+                  icon: const Icon(Icons.edit_outlined),
                 ),
               ],
             ),
-            if (todayEntry.tags.isNotEmpty) ...[
-              const SizedBox(height: 18),
-              Text('Pengaruh utama:', style: AppText.titleSmall),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                children: todayEntry.tags.map((tag) {
-                  return Chip(
-                    label: Text(tag),
-                    backgroundColor: AppColors.sagePale,
-                    labelStyle: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.sageDeep,
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
-            if (todayEntry.note.isNotEmpty) ...[
-              const SizedBox(height: 18),
-              Text('Catatan:', style: AppText.titleSmall),
-              const SizedBox(height: 8),
-              Text(
-                todayEntry.note,
-                style: const TextStyle(
-                  fontSize: 15,
-                  height: 1.5,
-                  color: AppColors.textBody,
-                ),
-              ),
-            ],
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () async {
-                  final confirmed = await showDialog<bool>(
-                    context: context,
-                    builder: (dialogContext) => AlertDialog(
-                      backgroundColor: AppColors.surface,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      title: const Text('Hapus catatan hari ini?'),
-                      content: const Text(
-                        'Catatan suasana hati hari ini akan dihapus dan tidak bisa dikembalikan.',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(dialogContext, false),
-                          child: const Text('Batal'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(dialogContext, true),
-                          style: TextButton.styleFrom(foregroundColor: AppColors.terracotta),
-                          child: const Text('Hapus'),
-                        ),
-                      ],
-                    ),
-                  );
-                  if (confirmed == true) {
-                    if (!context.mounted) return;
-                    Navigator.pop(context);
-                    _deleteToday();
-                  }
-                },
-                icon: const Icon(Icons.delete_outline_rounded),
-                label: const Text('Hapus Entri'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.terracotta,
-                  side: const BorderSide(color: AppColors.terracotta),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _moodTile(Map<String, dynamic> mood) {
-    final isSelected = _selectedMood == mood['level'];
-    final color = Color(mood['color']);
-    return GestureDetector(
-      onTap: () => setState(() => _selectedMood = mood['level']),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? color.withValues(alpha: 0.25) : AppColors.surface,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: isSelected ? color : AppColors.borderLight,
-            width: isSelected ? 2 : 1,
           ),
-        ),
-        child: Column(
-          children: [
-            Text(_emoji(mood['level']), style: const TextStyle(fontSize: 30)),
-            const SizedBox(height: 6),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                mood['label'],
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  color: isSelected ? AppColors.textDark : AppColors.textMuted,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ───────────────────────── Insight cards ─────────────────────────
-
-  /// Kalender bulanan berbentuk hutan: tiap hari tercatat menjadi satu pohon.
-  /// Jenis pohon mengikuti mood hari itu. Hari yang belum dicatat tetap berupa tunas.
-  Widget _buildForestCard() {
-    final t = _today();
-    final daysInMonth = DateTime(t.year, t.month + 1, 0).day;
-    final offset = DateTime(t.year, t.month, 1).weekday - 1; // Senin = 0
-    final levels = <int, int>{for (final e in _monthEntries) e.date.day: e.level};
-    final logged = levels.length;
-    final rows = ((offset + daysInMonth) / 7).ceil();
-    const weekdayHeads = ['S', 'S', 'R', 'K', 'J', 'S', 'M'];
-
-    return _card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _cardTitle(Icons.forest_rounded, 'Hutan ${_monthNames[t.month - 1]}'),
-          const SizedBox(height: 12),
-          Text('$logged dari $daysInMonth hari sudah tumbuh',
-              style: const TextStyle(
-                  fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark)),
-          const SizedBox(height: 3),
-          Text(
-            _streak > 0
-                ? 'Kamu mencatat $_streak hari berturut-turut.'
-                : 'Mulai lagi kapan pun kamu siap. Tidak ada yang tertinggal.',
-            style: const TextStyle(fontSize: 13, color: AppColors.textMuted, height: 1.4),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              for (final d in weekdayHeads)
-                Expanded(
-                  child: Center(
-                    child: Text(d,
-                        style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textMuted)),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          for (int r = 0; r < rows; r++)
-            Row(
+          Padding(
+            padding: const EdgeInsets.all(Space.xl),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (int c = 0; c < 7; c++)
-                  Expanded(
-                    child: () {
-                      final d = r * 7 + c - offset + 1;
-                      if (d < 1 || d > daysInMonth) return const SizedBox(height: 50);
-                      return _dayCell(d, t, levels);
-                    }(),
-                  ),
-              ],
-            ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 14,
-            runSpacing: 8,
-            children: [
-              for (final mood in AppConstants.moodOptions)
-                _legendItem(mood['level'] as int, mood['label'] as String),
-              _legendItem(0, 'Belum dicatat'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _dayCell(int d, DateTime t, Map<int, int> levels) {
-    final isToday = d == t.day;
-    final level = levels[d] ?? (d > t.day ? -1 : 0);
-    return Container(
-      height: 50,
-      margin: const EdgeInsets.all(1.5),
-      decoration: BoxDecoration(
-        color: isToday ? AppColors.sagePale : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: 30,
-            height: 30,
-            child: CustomPaint(painter: _MoodTreePainter(level)),
-          ),
-          const SizedBox(height: 1),
-          Text(
-            '$d',
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: isToday ? FontWeight.w800 : FontWeight.w500,
-              color: isToday ? AppColors.sageDeep : AppColors.textMuted,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _legendItem(int level, String label) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          width: 20,
-          height: 20,
-          child: CustomPaint(painter: _MoodTreePainter(level)),
-        ),
-        const SizedBox(width: 4),
-        Text(label, style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted)),
-      ],
-    );
-  }
-
-  Widget _buildWeekChartCard() {
-    final values = _weekValues;
-    final count = values.where((v) => v != null).length;
-
-    return _card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _cardTitle(Icons.spa_rounded, 'Mood 7 hari terakhir'),
-          const SizedBox(height: 14),
-          if (count < _minEntries)
-            _emptyState(
-              icon: Icons.insights_outlined,
-              message: 'Catat minimal $_minEntries hari dalam seminggu agar grafik bisa ditampilkan. '
-                  'Sekarang baru $count hari.',
-            )
-          else ...[
-            SizedBox(
-              height: 140,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  SizedBox(
-                    width: 26,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 9.5),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          for (int l = 5; l >= 1; l--)
-                            Text(_emoji(l), style: const TextStyle(fontSize: 14)),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: CustomPaint(
-                      painter: _WeekChartPainter(
-                        values: values,
-                        gridColor: AppColors.border,
-                        colorFor: (v) => Color(_moodByLevel(v)['color']),
-                      ),
-                    ),
+                if (entry.tags.isNotEmpty) ...[
+                  const Text('Yang memengaruhi', style: AppText.titleSmall),
+                  const SizedBox(height: Space.sm),
+                  Wrap(
+                    spacing: Space.sm,
+                    runSpacing: Space.sm,
+                    children: entry.tags
+                        .map(
+                          (tag) => StatusChip(
+                            label: tag,
+                            color: AppColors.forestDeep,
+                            background: AppColors.forestMist,
+                          ),
+                        )
+                        .toList(),
                   ),
                 ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const SizedBox(width: 26),
-                for (final label in _weekLabels)
-                  Expanded(
-                    child: Center(
-                      child: Text(label,
-                          style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted)),
-                    ),
+                if (entry.note.isNotEmpty) ...[
+                  if (entry.tags.isNotEmpty) const SizedBox(height: Space.lg),
+                  const Text('Catatan', style: AppText.titleSmall),
+                  const SizedBox(height: Space.sm),
+                  Text(entry.note, style: AppText.bodyMedium),
+                ],
+                if (entry.tags.isEmpty && entry.note.isEmpty)
+                  Text(
+                    'Tidak ada catatan tambahan untuk hari ini.',
+                    style: AppText.bodySmall,
                   ),
               ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  static const List<Color> _factorColors = [
-    _Nature.moss,
-    _Nature.bark,
-    _Nature.clay,
-    _Nature.fern,
-    _Nature.lake,
-    _Nature.sand,
-  ];
-
-  /// Faktor yang sering dipilih: grafik donat porsi tiap faktor + legenda.
-  Widget _buildTriggersCard() {
-    final month = _monthEntries;
-    final counts = <String, int>{};
-    for (final e in month) {
-      for (final tag in e.tags) {
-        counts[tag] = (counts[tag] ?? 0) + 1;
-      }
-    }
-    final sorted = counts.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
-    final shown = sorted.take(_factorColors.length).toList();
-    final total = shown.fold<int>(0, (sum, e) => sum + e.value);
-    final hasData = month.length >= _minEntries && shown.isNotEmpty;
-
-    return _card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _cardTitle(Icons.park_rounded, 'Faktor yang paling sering dipilih'),
-          const SizedBox(height: 16),
-          if (!hasData)
-            _emptyState(
-              icon: Icons.label_outline_rounded,
-              message: 'Pilih faktor saat check-in, lalu polanya akan tampil di sini.',
-            )
-          else ...[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                SizedBox(
-                  width: 124,
-                  height: 124,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      CustomPaint(
-                        size: const Size(124, 124),
-                        painter: _DonutPainter(
-                          values: [for (final e in shown) e.value.toDouble()],
-                          colors: _factorColors,
-                          trackColor: AppColors.sagePale,
-                        ),
-                      ),
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '${(shown.first.value / total * 100).round()}%',
-                            style: const TextStyle(
-                              fontSize: 24,
-                              height: 1.1,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.5,
-                              color: AppColors.textDark,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          SizedBox(
-                            width: 64,
-                            child: Text(
-                              shown.first.key,
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontSize: 11.5, color: AppColors.textMuted),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 18),
-                Expanded(
-                  child: Column(
-                    children: [
-                      for (int i = 0; i < shown.length; i++)
-                        Padding(
-                          padding: EdgeInsets.only(bottom: i == shown.length - 1 ? 0 : 9),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 10,
-                                height: 10,
-                                decoration: BoxDecoration(
-                                  color: _factorColors[i],
-                                  borderRadius: BorderRadius.circular(3),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  shown[i].key,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                      fontSize: 13, color: AppColors.textBody),
-                                ),
-                              ),
-                              Text(
-                                '${(shown[i].value / total * 100).round()}%',
-                                style: const TextStyle(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.textDark,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            const Text(
-              'Porsi dari seluruh faktor yang kamu pilih bulan ini.',
-              style: TextStyle(fontSize: 11.5, color: AppColors.textMuted),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDisclaimer() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.sagePale.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: const Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.info_outline_rounded, size: 18, color: AppColors.sageDeep),
-          SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Ringkasan ini hanya merangkum catatan yang kamu isi sendiri. '
-              'Ini bukan diagnosis atau penilaian kondisi kesehatan mental. '
-              'Jika kamu merasa kewalahan, pertimbangkan berbicara dengan orang '
-              'tepercaya atau tenaga profesional.',
-              style: TextStyle(fontSize: 12.5, height: 1.5, color: AppColors.textBody),
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  // ───────────────────────── Reusable widgets ─────────────────────────
+// ─────────────────────────────────────────────
+// Inspiration carousel
+// ─────────────────────────────────────────────
 
-  /// Kartu dengan ranting daun tipis di pojok kanan atas.
-  Widget _card({
-    required Widget child,
-    EdgeInsets padding = const EdgeInsets.all(16),
-    bool sprig = true,
-  }) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.borderLight),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+class _InspirationCarousel extends StatelessWidget {
+  final PageController pageController;
+  final int activePage;
+  final ValueChanged<int> onPageChanged;
+
+  const _InspirationCarousel({
+    required this.pageController,
+    required this.activePage,
+    required this.onPageChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const banner = <_InspirationCard>[
+      _InspirationCard(
+        quote: 'It always seems impossible until it\'s done.',
+        source: 'Nelson Mandela · English',
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(21),
-        child: Stack(
-          children: [
-            if (sprig)
-              const Positioned(
-                top: 0,
-                right: 0,
-                child: IgnorePointer(
-                  child: SizedBox(
-                    width: 96,
-                    height: 96,
-                    child: CustomPaint(painter: _SprigPainter()),
-                  ),
-                ),
-              ),
-            Padding(padding: padding, child: child),
-          ],
-        ),
+      _InspirationCard(
+        quote: 'Rasa sakitmu adalah pecahnya cangkang yang membungkus pemahamanmu.',
+        source: 'Kahlil Gibran · terjemahan Indonesia',
       ),
-    );
-  }
+      _InspirationCard(
+        quote: 'There is no greater agony than bearing an untold story inside you.',
+        source: 'Maya Angelou · English',
+      ),
+      _InspirationCard(
+        quote: 'Bahkan malam yang paling gelap akan berakhir dan matahari akan terbit.',
+        source: 'Victor Hugo · terjemahan Indonesia',
+      ),
+      _InspirationCard(
+        quote: 'Your pain is the breaking of the shell that encloses your understanding.',
+        source: 'Kahlil Gibran · English',
+      ),
+    ];
 
-  Widget _sectionHeader(String title, String subtitle) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: AppText.titleSmall.copyWith(fontSize: 18)),
-        const SizedBox(height: 2),
-        Text(subtitle, style: AppText.bodyMedium),
-      ],
-    );
-  }
-
-  Widget _cardTitle(IconData icon, String text) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: AppColors.sagePale,
-            borderRadius: BorderRadius.circular(10),
+        Row(
+          children: [
+            const Expanded(
+              child: _SectionTitle(
+                title: 'Penyeimbang hari ini',
+                subtitle: 'Pilih pesan yang ingin kamu simpan dekat.',
+              ),
+            ),
+            Semantics(
+              label: 'Pesan ${activePage + 1} dari ${banner.length}',
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Space.sm,
+                  vertical: Space.xs,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.forestMist,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '${activePage + 1}/${banner.length}',
+                  style: AppText.caption.copyWith(
+                    color: AppColors.forestDeep,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: Space.md),
+        SizedBox(
+          height: MediaQuery.sizeOf(context).width < 400 ? 220 : 196,
+          child: PageView.builder(
+            controller: pageController,
+            itemCount: banner.length,
+            onPageChanged: onPageChanged,
+            itemBuilder: (context, index) => AnimatedBuilder(
+              animation: pageController,
+              builder: (context, child) {
+                var page = activePage.toDouble();
+                if (pageController.hasClients) {
+                  page = pageController.page ?? page;
+                }
+                final distance = (page - index).abs().clamp(0.0, 1.0);
+                return Transform.scale(
+                  scale: 1 - (distance * 0.035),
+                  alignment: Alignment.center,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: banner[index],
+                  ),
+                );
+              },
+            ),
           ),
-          child: Icon(icon, size: 16, color: AppColors.sageDeep),
         ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(text,
-              style: const TextStyle(
-                  fontSize: 14.5, fontWeight: FontWeight.w700, color: AppColors.textDark)),
+        const SizedBox(height: Space.md),
+        Row(
+          children: [
+            Expanded(
+              child: Row(
+                children: List.generate(
+                  banner.length,
+                  (index) => AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                    width: index == activePage ? 24 : 7,
+                    height: 7,
+                    margin: const EdgeInsets.only(right: 5),
+                    decoration: BoxDecoration(
+                      color: index == activePage
+                          ? AppColors.forest
+                          : AppColors.border,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Icon(
+              Icons.swipe_left_rounded,
+              size: 18,
+              color: AppColors.textLight,
+            ),
+            const SizedBox(width: Space.xs),
+            Text('Geser', style: AppText.caption),
+          ],
         ),
       ],
     );
   }
+}
 
-  Widget _emptyState({required IconData icon, required String message}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-      decoration: BoxDecoration(
-        color: AppColors.cream,
-        borderRadius: BorderRadius.circular(16),
+class _InspirationCard extends StatelessWidget {
+  final String quote;
+  final String source;
+
+  const _InspirationCard({required this.quote, required this.source});
+
+  @override
+  Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 400;
+    return Semantics(
+      label: 'Kata penyeimbang: $quote',
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF2D6A4F),
+              Color(0xFF1E5C3A),
+              Color(0xFF144D2E),
+            ],
+            stops: [0.0, 0.5, 1.0],
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: Stack(
+            children: [
+              // ── Tinted glass hijau bening ──
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFF74C69D).withValues(alpha: 0.22),
+                        Color(0xFF52B788).withValues(alpha: 0.10),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.5, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+
+              // ── Highlight kaca atas ──
+              Positioned(
+                top: 0,
+                left: 16,
+                right: 16,
+                child: Container(
+                  height: 1.5,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.transparent,
+                        Color(0xFFB7E4C7).withValues(alpha: 0.60),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // ── Highlight kaca kiri ──
+              Positioned(
+                top: 16,
+                left: 0,
+                bottom: 16,
+                child: Container(
+                  width: 1.5,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0xFFB7E4C7).withValues(alpha: 0.45),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // ── Konten ──
+              Padding(
+                padding: EdgeInsets.all(compact ? Space.lg : Space.xl),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Ikon kutip
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Color(0xFFB7E4C7).withValues(alpha: 0.20),
+                        border: Border.all(
+                          color: Color(0xFFB7E4C7).withValues(alpha: 0.45),
+                          width: 1,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.format_quote_rounded,
+                        color: Color(0xFFD8F3DC),
+                        size: 20,
+                      ),
+                    ),
+
+                    const Spacer(),
+
+                    // Teks kutipan
+                    Text(
+                      '"$quote"',
+                      style: AppText.bodyLarge.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w400,
+                        height: 1.55,
+                        letterSpacing: 0.15,
+                        shadows: [
+                          Shadow(
+                            color: Color(0xFF1B4332).withValues(alpha: 0.5),
+                            blurRadius: 10,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: Space.md),
+
+                    // Sumber — pill kaca
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Color(0xFFB7E4C7).withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Color(0xFFB7E4C7).withValues(alpha: 0.40),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 5,
+                            height: 5,
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Color(0xFFD8F3DC),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              source,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.caption.copyWith(
+                                color: const Color(0xFFD8F3DC),
+                                fontWeight: FontWeight.w500,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+// Section title
+// ─────────────────────────────────────────────
+
+class _SectionTitle extends StatelessWidget {
+  final String title;
+  final String subtitle;
+
+  const _SectionTitle({required this.title, required this.subtitle});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: AppText.titleMedium),
+        const SizedBox(height: 2),
+        Text(subtitle, style: AppText.bodySmall),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+// Weekly chart — crypto style
+// ─────────────────────────────────────────────
+
+class _WeeklyChartCard extends StatefulWidget {
+  final List<MoodEntry> entries;
+  final DateTime today;
+  final _MoodData Function(int level) moodData;
+
+  const _WeeklyChartCard({
+    required this.entries,
+    required this.today,
+    required this.moodData,
+  });
+
+  @override
+  State<_WeeklyChartCard> createState() => _WeeklyChartCardState();
+}
+
+class _WeeklyChartCardState extends State<_WeeklyChartCard> {
+  static const _ranges = [7, 14, 30];
+  static const _weekdays = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+  static const _months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'Mei',
+    'Jun',
+    'Jul',
+    'Agu',
+    'Sep',
+    'Okt',
+    'Nov',
+    'Des',
+  ];
+
+  int _range = 7;
+  int? _touch;
+
+  DateTime _daysAgo(int d) =>
+      DateTime(widget.today.year, widget.today.month, widget.today.day - d);
+
+  MoodEntry? _entryOn(DateTime day) {
+    MoodEntry? found;
+    for (final e in widget.entries) {
+      if (e.date == day) found = e;
+    }
+    return found;
+  }
+
+  double? _average(int fromAgo, int toAgo) {
+    var sum = 0;
+    var count = 0;
+    for (var d = toAgo; d <= fromAgo; d++) {
+      final e = _entryOn(_daysAgo(d));
+      if (e != null) {
+        sum += e.level;
+        count++;
+      }
+    }
+    return count == 0 ? null : sum / count;
+  }
+
+  String _dateText(DateTime d) =>
+      '${_weekdays[d.weekday - 1]}, ${d.day} ${_months[d.month - 1]}';
+
+  @override
+  Widget build(BuildContext context) {
+    // Mulai dari Senin di minggu pertama rentang, akhiri hari ini
+    final rangeStart = widget.today.subtract(Duration(days: _range - 1));
+    final monday = rangeStart.subtract(
+      Duration(days: (rangeStart.weekday - 1) % 7),
+    );
+    final totalDays = widget.today.difference(monday).inDays + 1;
+    final days = List.generate(totalDays, (i) {
+      final day = monday.add(Duration(days: i));
+      return (day: day, entry: _entryOn(day));
+    });
+    final n = days.length;
+
+    final logged = days.where((d) => d.entry != null).toList();
+    final levels = logged.map((d) => d.entry!.level).toList();
+    final avg = levels.isEmpty
+        ? null
+        : levels.reduce((a, b) => a + b) / levels.length;
+    final prevAvg = _average(n * 2 - 1, n);
+    final delta = (avg != null && prevAvg != null) ? avg - prevAvg : null;
+    final up = (delta ?? 0) >= 0;
+    final trendColor = up ? AppColors.forest : AppColors.moodLow;
+
+    final touched = (_touch != null && _touch! < n) ? days[_touch!] : null;
+
+    final xLabels = List.generate(n, (i) {
+      final d = days[i].day;
+      if (_range == 7) {
+        // Tampilkan semua nama hari
+        return _weekdays[d.weekday - 1];
+      } else {
+        // Hanya tampilkan label di hari Senin (awal minggu)
+        if (d.weekday != DateTime.monday) return '';
+        return '${d.day}/${d.month}';
+      }
+    });
+
+    final tooltips = days.map((d) {
+      final label = d.entry == null
+          ? 'Belum check-in'
+          : widget.moodData(d.entry!.level).label;
+      return '$label · ${d.day.day} ${_months[d.day.month - 1]}';
+    }).toList();
+
+    final maxLevel = levels.isEmpty
+        ? null
+        : levels.reduce((a, b) => a > b ? a : b);
+    final minLevel = levels.isEmpty
+        ? null
+        : levels.reduce((a, b) => a < b ? a : b);
+
+    return SoftCard(
+      padding: const EdgeInsets.all(Space.xl),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 28, color: AppColors.textMuted),
-          const SizedBox(height: 8),
-          Text(message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 13, height: 1.5, color: AppColors.textMuted)),
+          Row(
+            children: [
+              const Expanded(
+                child: Text('Progres mingguan', style: AppText.titleLarge),
+              ),
+              _RangeTabs(
+                options: _ranges,
+                selected: _range,
+                onChanged: (value) => setState(() {
+                  _range = value;
+                  _touch = null;
+                }),
+              ),
+            ],
+          ),
+          const SizedBox(height: Space.lg),
+          Text(
+            touched != null
+                ? _dateText(touched.day)
+                : 'Rata-rata $n hari terakhir',
+            style: AppText.caption.copyWith(color: AppColors.textMuted),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Flexible(
+                child: touched != null
+                    ? Text(
+                        touched.entry == null
+                            ? 'Belum check-in'
+                            : widget.moodData(touched.entry!.level).label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.displayLarge.copyWith(
+                          fontSize: 34,
+                          height: 1.1,
+                          color: touched.entry == null
+                              ? AppColors.textMuted
+                              : widget.moodData(touched.entry!.level).color,
+                        ),
+                      )
+                    : Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            avg == null ? '—' : avg.toStringAsFixed(1),
+                            style: AppText.displayLarge.copyWith(
+                              fontSize: 34,
+                              height: 1.1,
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 5, left: 3),
+                            child: Text(
+                              '/ 5',
+                              style: AppText.bodySmall.copyWith(
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+              const SizedBox(width: Space.md),
+              if (touched == null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 5),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: delta == null
+                          ? AppColors.surfaceSunken
+                          : trendColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (delta != null)
+                          Icon(
+                            up
+                                ? Icons.arrow_drop_up_rounded
+                                : Icons.arrow_drop_down_rounded,
+                            size: 18,
+                            color: trendColor,
+                          ),
+                        Text(
+                          delta == null
+                              ? 'Belum ada pembanding'
+                              : '${delta >= 0 ? '+' : ''}${delta.toStringAsFixed(1)}',
+                          style: AppText.caption.copyWith(
+                            color: delta == null
+                                ? AppColors.textMuted
+                                : trendColor,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: Space.lg),
+          SizedBox(
+            height: 220,
+            child: LayoutBuilder(
+              builder: (context, c) {
+                void update(double dx) {
+                  final w =
+                      c.maxWidth -
+                      _TrendPainter.leftPad -
+                      _TrendPainter.rightPad;
+                  final t = ((dx - _TrendPainter.leftPad) / w).clamp(0.0, 1.0);
+                  final idx = (t * (n - 1)).round();
+                  if (idx != _touch) setState(() => _touch = idx);
+                }
+
+                return GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTapDown: (d) {
+                    final before = _touch;
+                    update(d.localPosition.dx);
+                    if (before != null && before == _touch) {
+                      setState(() => _touch = null);
+                    }
+                  },
+                  onHorizontalDragStart: (d) => update(d.localPosition.dx),
+                  onHorizontalDragUpdate: (d) => update(d.localPosition.dx),
+                  onHorizontalDragEnd: (_) => setState(() => _touch = null),
+                  onHorizontalDragCancel: () => setState(() => _touch = null),
+                  child: Semantics(
+                    label:
+                        'Grafik mood $n hari terakhir. ${logged.length} hari tercatat.',
+                    child: ExcludeSemantics(
+                      child: CustomPaint(
+                        size: Size(c.maxWidth, 220),
+                        painter: _TrendPainter(
+                          levels: days.map((d) => d.entry?.level).toList(),
+                          colors: days
+                              .map(
+                                (d) => d.entry == null
+                                    ? null
+                                    : widget.moodData(d.entry!.level).color,
+                              )
+                              .toList(),
+                          xLabels: xLabels,
+                          tooltips: tooltips,
+                          yLabels: List.generate(
+                            5,
+                            (i) => widget.moodData(i + 1).label,
+                          ),
+                          lineColor: trendColor,
+                          touchIndex: _touch,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: Space.sm),
+          Row(
+            children: [
+              Icon(
+                Icons.touch_app_outlined,
+                size: 14,
+                color: AppColors.textLight,
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  'Sentuh atau geser grafik untuk melihat detail',
+                  style: AppText.caption.copyWith(color: AppColors.textLight),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Space.lg),
+          Row(
+            children: [
+              Expanded(
+                child: _StatTile(
+                  label: 'Tertinggi',
+                  value: maxLevel == null
+                      ? '—'
+                      : widget.moodData(maxLevel).label,
+                  color: maxLevel == null
+                      ? AppColors.textMuted
+                      : widget.moodData(maxLevel).color,
+                ),
+              ),
+              const SizedBox(width: Space.sm),
+              Expanded(
+                child: _StatTile(
+                  label: 'Terendah',
+                  value: minLevel == null
+                      ? '—'
+                      : widget.moodData(minLevel).label,
+                  color: minLevel == null
+                      ? AppColors.textMuted
+                      : widget.moodData(minLevel).color,
+                ),
+              ),
+              const SizedBox(width: Space.sm),
+              Expanded(
+                child: _StatTile(
+                  label: 'Tercatat',
+                  value: '${logged.length}/$n',
+                  color: AppColors.forest,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-//  NATURE KIT: palet, pohon, pemandangan, dan painter
-//  Semua digambar sebagai bentuk datar (flat), bukan gradasi.
-// ═══════════════════════════════════════════════════════════════════════
+class _RangeTabs extends StatelessWidget {
+  final List<int> options;
+  final int selected;
+  final ValueChanged<int> onChanged;
 
-class _Nature {
-  static const bark = Color(0xFF7A5C45);
-  static const moss = Color(0xFF6F8F5A);
-  static const fern = Color(0xFF9DB87C);
-  static const pine = Color(0xFF4F7355);
-  static const blossom = Color(0xFFE7A7B4);
-  static const blossomLight = Color(0xFFF6D3DA);
-  static const autumn = Color(0xFFD9894B);
-  static const autumnDeep = Color(0xFFB9692F);
-  static const rain = Color(0xFF8FA7B5);
-  static const sand = Color(0xFFE0CFA9);
-  static const clay = Color(0xFFC98B6B);
-  static const lake = Color(0xFF8FB5B0);
-
-  static const sandTint = Color(0xFFF3E9CF);
-  static const mintTint = Color(0xFFDDEBCB);
-  static const lakeTint = Color(0xFFD6E8E3);
-}
-
-enum _TreeKind { pine, round, blossom, autumn, bare, bush }
-
-const List<Offset> _canopyDots = [
-  Offset(-0.20, -0.62),
-  Offset(0.18, -0.55),
-  Offset(0.02, -0.80),
-  Offset(-0.12, -0.92),
-  Offset(0.22, -0.74),
-];
-
-/// Menggambar satu pohon dengan pangkal di [base], tinggi [h].
-void _paintTree(
-  Canvas c,
-  _TreeKind kind,
-  Offset base,
-  double h, {
-  required Color trunk,
-  required Color leaf,
-  Color? accent,
-  double sway = 0,
-}) {
-  c.save();
-  c.translate(base.dx, base.dy);
-  c.rotate(sway);
-  final tp = Paint()..color = trunk;
-  final lp = Paint()..color = leaf;
-
-  switch (kind) {
-    case _TreeKind.pine:
-      {
-        final tw = h * 0.07;
-        c.drawRect(Rect.fromLTWH(-tw / 2, -h * 0.18, tw, h * 0.18), tp);
-        for (int i = 0; i < 3; i++) {
-          final apex = -h + i * h * 0.24;
-          final bot = apex + h * 0.42;
-          final hw = h * (0.19 + 0.08 * i);
-          c.drawPath(
-            Path()
-              ..moveTo(0, apex)
-              ..lineTo(-hw, bot)
-              ..lineTo(hw, bot)
-              ..close(),
-            lp,
-          );
-        }
-      }
-    case _TreeKind.round:
-    case _TreeKind.blossom:
-    case _TreeKind.autumn:
-      {
-        final tw = h * 0.08;
-        c.drawRect(Rect.fromLTWH(-tw / 2, -h * 0.4, tw, h * 0.4), tp);
-        c.drawCircle(Offset(0, -h * 0.62), h * 0.3, lp);
-        c.drawCircle(Offset(-h * 0.2, -h * 0.5), h * 0.22, lp);
-        c.drawCircle(Offset(h * 0.2, -h * 0.5), h * 0.22, lp);
-        c.drawCircle(Offset(0, -h * 0.78), h * 0.2, lp);
-        if (accent != null) {
-          final ap = Paint()..color = accent;
-          for (final o in _canopyDots) {
-            c.drawCircle(Offset(o.dx * h, o.dy * h), h * 0.045, ap);
-          }
-        }
-      }
-    case _TreeKind.bare:
-      {
-        final bp = Paint()
-          ..color = trunk
-          ..style = PaintingStyle.stroke
-          ..strokeCap = StrokeCap.round
-          ..strokeWidth = h * 0.07;
-        c.drawLine(Offset.zero, Offset(0, -h * 0.58), bp);
-        bp.strokeWidth = h * 0.04;
-        c.drawLine(Offset(0, -h * 0.35), Offset(-h * 0.22, -h * 0.62), bp);
-        c.drawLine(Offset(0, -h * 0.45), Offset(h * 0.22, -h * 0.76), bp);
-        c.drawLine(Offset(0, -h * 0.58), Offset(-h * 0.1, -h * 0.96), bp);
-        c.drawLine(Offset(0, -h * 0.58), Offset(h * 0.12, -h * 0.9), bp);
-      }
-    case _TreeKind.bush:
-      {
-        c.drawCircle(Offset(-h * 0.45, -h * 0.3), h * 0.35, lp);
-        c.drawCircle(Offset(h * 0.45, -h * 0.3), h * 0.35, lp);
-        c.drawCircle(Offset(0, -h * 0.5), h * 0.45, lp);
-      }
-  }
-  c.restore();
-}
-
-/// Menggambar sehelai daun. [angle] 0 = menunjuk ke kanan.
-void _drawLeaf(Canvas c, Offset o, double angle, double len, Paint fill, {Paint? outline}) {
-  c.save();
-  c.translate(o.dx, o.dy);
-  c.rotate(angle);
-  final path = Path()
-    ..moveTo(0, 0)
-    ..quadraticBezierTo(len * 0.5, -len * 0.45, len, 0)
-    ..quadraticBezierTo(len * 0.5, len * 0.45, 0, 0);
-  c.drawPath(path, fill);
-  if (outline != null) c.drawPath(path, outline);
-  c.restore();
-}
-
-// ───────────────────────── Pohon mood (ikon kalender) ─────────────────────────
-
-/// level 1..5 = pohon sesuai mood, 0 = belum dicatat (tunas), -1 = hari yang belum tiba.
-class _MoodTreePainter extends CustomPainter {
-  final int level;
-  const _MoodTreePainter(this.level);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width, h = size.height;
-    final base = Offset(w / 2, h * 0.9);
-
-    if (level < 0) {
-      canvas.drawCircle(base - const Offset(0, 2), 1.6, Paint()..color = _Nature.sand);
-      return;
-    }
-
-    canvas.drawOval(
-      Rect.fromCenter(center: base, width: w * 0.64, height: h * 0.1),
-      Paint()..color = _Nature.sand.withValues(alpha: 0.85),
-    );
-
-    if (level == 0) {
-      final stem = Paint()
-        ..color = _Nature.moss.withValues(alpha: 0.5)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.6
-        ..strokeCap = StrokeCap.round;
-      canvas.drawLine(base, base - Offset(0, h * 0.3), stem);
-      final lf = Paint()..color = _Nature.moss.withValues(alpha: 0.5);
-      final top = base - Offset(0, h * 0.2);
-      _drawLeaf(canvas, top, -0.7, h * 0.2, lf);
-      _drawLeaf(canvas, top, -math.pi + 0.7, h * 0.2, lf);
-      return;
-    }
-
-    final th = h * 0.8;
-    switch (level) {
-      case 5:
-        _paintTree(canvas, _TreeKind.blossom, base, th,
-            trunk: _Nature.bark, leaf: _Nature.blossom, accent: _Nature.blossomLight);
-      case 4:
-        _paintTree(canvas, _TreeKind.round, base, th,
-            trunk: _Nature.bark, leaf: _Nature.moss, accent: _Nature.fern);
-      case 3:
-        _paintTree(canvas, _TreeKind.pine, base, th,
-            trunk: _Nature.bark, leaf: _Nature.pine);
-      case 2:
-        _paintTree(canvas, _TreeKind.autumn, base, th,
-            trunk: _Nature.bark, leaf: _Nature.autumn, accent: _Nature.autumnDeep);
-      default:
-        _paintTree(canvas, _TreeKind.bare, base, th,
-            trunk: _Nature.bark.withValues(alpha: 0.85), leaf: _Nature.bark);
-        final rp = Paint()
-          ..color = _Nature.rain
-          ..strokeWidth = 1.4
-          ..strokeCap = StrokeCap.round;
-        for (int i = 0; i < 3; i++) {
-          final x = w * (0.28 + 0.22 * i);
-          final y = h * (0.10 + 0.06 * (i % 2));
-          canvas.drawLine(Offset(x, y), Offset(x - 1.5, y + h * 0.12), rp);
-        }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _MoodTreePainter old) => old.level != level;
-}
-
-// ───────────────────────── Ranting hias di kartu ─────────────────────────
-
-class _SprigPainter extends CustomPainter {
-  const _SprigPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width, h = size.height;
-    final p0 = Offset(w, 0);
-    final p1 = Offset(w * 0.55, h * 0.1);
-    final p2 = Offset(w * 0.18, h * 0.78);
-
-    canvas.drawPath(
-      Path()
-        ..moveTo(p0.dx, p0.dy)
-        ..quadraticBezierTo(p1.dx, p1.dy, p2.dx, p2.dy),
-      Paint()
-        ..color = _Nature.moss.withValues(alpha: 0.22)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.6
-        ..strokeCap = StrokeCap.round,
-    );
-
-    final leaf = Paint()..color = _Nature.moss.withValues(alpha: 0.16);
-    for (int i = 1; i <= 5; i++) {
-      final t = i / 6;
-      final mt = 1 - t;
-      final x = mt * mt * p0.dx + 2 * mt * t * p1.dx + t * t * p2.dx;
-      final y = mt * mt * p0.dy + 2 * mt * t * p1.dy + t * t * p2.dy;
-      final dx = 2 * mt * (p1.dx - p0.dx) + 2 * t * (p2.dx - p1.dx);
-      final dy = 2 * mt * (p1.dy - p0.dy) + 2 * t * (p2.dy - p1.dy);
-      final ang = math.atan2(dy, dx);
-      final side = i.isEven ? 1.0 : -1.0;
-      _drawLeaf(canvas, Offset(x, y), ang + side * 0.9, 15, leaf);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _SprigPainter old) => false;
-}
-
-// ───────────────────────── Lencana daun ─────────────────────────
-
-/// Lencana daun dengan animasi bergoyang pelan.
-/// Bisa dipakai ulang, misalnya untuk logo "Tenang" di app bar:
-/// `const AnimatedLeafBadge(size: 32)`.
-class AnimatedLeafBadge extends StatefulWidget {
-  final double size;
-  const AnimatedLeafBadge({super.key, this.size = 56});
-
-  @override
-  State<AnimatedLeafBadge> createState() => _AnimatedLeafBadgeState();
-}
-
-class _AnimatedLeafBadgeState extends State<AnimatedLeafBadge>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 2800),
-  )..repeat(reverse: true);
-
-  late final Animation<double> _sway = Tween<double>(begin: -0.14, end: 0.14).animate(
-    CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-  );
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  const _RangeTabs({
+    required this.options,
+    required this.selected,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: widget.size,
-      height: widget.size,
-      alignment: Alignment.center,
+      padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: AppColors.sagePale,
-        border: Border.all(color: AppColors.sageLight, width: 1.5),
+        color: AppColors.forestMist,
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: AnimatedBuilder(
-        animation: _sway,
-        builder: (context, child) => Transform.rotate(
-          angle: _sway.value,
-          alignment: Alignment.bottomCenter,
-          child: child,
-        ),
-        child: Icon(Icons.eco_rounded, size: widget.size * 0.52, color: AppColors.sageDeep),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: options.map((value) {
+          final active = value == selected;
+          return Semantics(
+            button: true,
+            selected: active,
+            label: '$value hari',
+            child: GestureDetector(
+              onTap: () => onChanged(value),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: active ? AppColors.surface : Colors.transparent,
+                  borderRadius: BorderRadius.circular(9),
+                  boxShadow: active
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.06),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Text(
+                  '${value}H',
+                  style: AppText.caption.copyWith(
+                    fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+                    color: active ? AppColors.forestDeep : AppColors.textMuted,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
 }
 
-// ───────────────────────── Grafik ─────────────────────────
+class _StatTile extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
 
-/// Grafik donat dengan celah kecil antar segmen.
-class _DonutPainter extends CustomPainter {
-  final List<double> values;
-  final List<Color> colors;
-  final Color trackColor;
-
-  _DonutPainter({required this.values, required this.colors, required this.trackColor});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const stroke = 16.0;
-    final rect = Rect.fromLTWH(stroke / 2, stroke / 2, size.width - stroke, size.height - stroke);
-    final total = values.fold<double>(0, (a, b) => a + b);
-    if (total <= 0) return;
-
-    canvas.drawArc(
-      rect, 0, 6.2832, false,
-      Paint()
-        ..color = trackColor
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = stroke,
-    );
-
-    const gap = 0.05; // radian
-    var start = -1.5708; // mulai dari atas
-    for (int i = 0; i < values.length; i++) {
-      final sweep = values[i] / total * 6.2832;
-      final drawSweep = values.length > 1 ? (sweep - gap).clamp(0.01, 6.2832) : sweep;
-      canvas.drawArc(
-        rect, start + (values.length > 1 ? gap / 2 : 0), drawSweep, false,
-        Paint()
-          ..color = colors[i % colors.length]
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = stroke
-          ..strokeCap = StrokeCap.butt,
-      );
-      start += sweep;
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _DonutPainter old) =>
-      old.values != values || old.colors != colors;
-}
-
-/// Grafik mood 7 hari berbentuk sulur: garis melengkung dengan daun
-/// berwarna sesuai mood. Nilai null = hari tanpa catatan (sulur terputus).
-class _WeekChartPainter extends CustomPainter {
-  final List<int?> values;
-  final Color gridColor;
-  final Color Function(int) colorFor;
-
-  _WeekChartPainter({
-    required this.values,
-    required this.gridColor,
-    required this.colorFor,
+  const _StatTile({
+    required this.label,
+    required this.value,
+    required this.color,
   });
 
   @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceSunken,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: AppText.caption.copyWith(color: AppColors.textMuted),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(value, style: AppText.titleSmall),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrendPainter extends CustomPainter {
+  final List<int?> levels;
+  final List<Color?> colors;
+  final List<String> xLabels;
+  final List<String> tooltips;
+  final List<String> yLabels;
+  final Color lineColor;
+  final int? touchIndex;
+
+  const _TrendPainter({
+    required this.levels,
+    required this.colors,
+    required this.xLabels,
+    required this.tooltips,
+    required this.yLabels,
+    required this.lineColor,
+    required this.touchIndex,
+  });
+
+  static const double leftPad = 6;
+  static const double rightPad = 50;
+  static const double topPad = 34;
+  static const double bottomPad = 24;
+  static const double innerV = 12;
+
+  TextPainter _tp(String text, TextStyle style) => TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: TextDirection.ltr,
+  )..layout();
+
+  @override
   void paint(Canvas canvas, Size size) {
-    const padY = 18.0;
-    final h = size.height - padY * 2;
-    final stepX = size.width / values.length;
+    final plot = Rect.fromLTRB(
+      leftPad,
+      topPad,
+      size.width - rightPad,
+      size.height - bottomPad,
+    );
+    final n = levels.length;
 
-    double yFor(int v) => padY + (5 - v) / 4 * h;
-    double xFor(int i) => stepX * (i + 0.5);
+    double xAt(int i) =>
+        n == 1 ? plot.center.dx : plot.left + plot.width * i / (n - 1);
+    double yAt(int level) =>
+        plot.bottom - innerV - (plot.height - innerV * 2) * (level - 1) / 4;
 
-    // garis bantu putus-putus
+    // Grid + label Y
     final grid = Paint()
-      ..color = gridColor
+      ..color = AppColors.borderLight
       ..strokeWidth = 1;
-    for (int l = 1; l <= 5; l++) {
-      final y = yFor(l);
-      for (double x = 0; x < size.width; x += 8) {
-        canvas.drawLine(Offset(x, y), Offset(math.min(x + 4, size.width), y), grid);
-      }
+    for (var level = 1; level <= 5; level++) {
+      final y = yAt(level);
+      _dashed(canvas, Offset(plot.left, y), Offset(plot.right, y), grid);
+      final tp = _tp(
+        yLabels[level - 1],
+        TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textMuted,
+        ),
+      );
+      tp.paint(canvas, Offset(plot.right + 8, y - tp.height / 2));
     }
 
-    // sulur
-    final vine = Paint()
-      ..color = _Nature.bark.withValues(alpha: 0.75)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.6
-      ..strokeCap = StrokeCap.round;
-    for (int i = 0; i < values.length - 1; i++) {
-      final a = values[i], b = values[i + 1];
-      if (a == null || b == null) continue;
-      final p0 = Offset(xFor(i), yFor(a));
-      final p1 = Offset(xFor(i + 1), yFor(b));
-      final cx = (p0.dx + p1.dx) / 2;
+    // Titik data
+    final pts = <int, Offset>{};
+    for (var i = 0; i < n; i++) {
+      final l = levels[i];
+      if (l != null) pts[i] = Offset(xAt(i), yAt(l));
+    }
+    final ordered = pts.keys.toList()..sort();
+
+    // Garis + area
+    if (ordered.length >= 2) {
+      final list = ordered.map((i) => pts[i]!).toList();
+      final line = Path()..moveTo(list.first.dx, list.first.dy);
+      for (var i = 1; i < list.length; i++) {
+        final cx = (list[i - 1].dx + list[i].dx) / 2;
+        line.cubicTo(
+          cx,
+          list[i - 1].dy,
+          cx,
+          list[i].dy,
+          list[i].dx,
+          list[i].dy,
+        );
+      }
+      final area = Path.from(line)
+        ..lineTo(list.last.dx, plot.bottom)
+        ..lineTo(list.first.dx, plot.bottom)
+        ..close();
+
       canvas.drawPath(
-        Path()
-          ..moveTo(p0.dx, p0.dy)
-          ..cubicTo(cx, p0.dy, cx, p1.dy, p1.dx, p1.dy),
-        vine,
+        area,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              lineColor.withValues(alpha: 0.28),
+              lineColor.withValues(alpha: 0.0),
+            ],
+          ).createShader(plot),
+      );
+      canvas.drawPath(
+        line,
+        Paint()
+          ..color = lineColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.6
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round,
       );
     }
 
-    // daun + simpul
-    final outline = Paint()
-      ..color = Colors.black.withValues(alpha: 0.12)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    for (int i = 0; i < values.length; i++) {
-      final v = values[i];
-      if (v == null) continue;
-      final p = Offset(xFor(i), yFor(v));
-      final ang = i.isEven ? -0.9 : -math.pi + 0.9;
-      _drawLeaf(canvas, p, ang, 17, Paint()..color = colorFor(v), outline: outline);
-      canvas.drawCircle(p, 4.6, Paint()..color = Colors.white);
-      canvas.drawCircle(p, 3.1, Paint()..color = _Nature.bark);
+    // Titik kecil (hanya rentang pendek)
+    if (n <= 14) {
+      for (final i in ordered) {
+        canvas.drawCircle(pts[i]!, 4.5, Paint()..color = AppColors.surface);
+        canvas.drawCircle(pts[i]!, 3, Paint()..color = colors[i] ?? lineColor);
+      }
+    }
+
+    // Titik terakhir bercahaya
+    if (ordered.isNotEmpty) {
+      final last = pts[ordered.last]!;
+      final c = colors[ordered.last] ?? lineColor;
+      canvas.drawCircle(last, 12, Paint()..color = c.withValues(alpha: 0.14));
+      canvas.drawCircle(last, 7, Paint()..color = AppColors.surface);
+      canvas.drawCircle(last, 4.5, Paint()..color = c);
+    }
+
+    // Label X
+    for (var i = 0; i < n; i++) {
+      if (xLabels[i].isEmpty) continue;
+      final isLast = i == n - 1;
+      final tp = _tp(
+        xLabels[i],
+        TextStyle(
+          fontSize: 10.5,
+          fontWeight: isLast ? FontWeight.w800 : FontWeight.w500,
+          color: isLast ? AppColors.forestDeep : AppColors.textMuted,
+        ),
+      );
+      final dx = (xAt(i) - tp.width / 2).clamp(0.0, size.width - tp.width);
+      tp.paint(canvas, Offset(dx, plot.bottom + 8));
+    }
+
+    // Crosshair + tooltip
+    final ti = touchIndex;
+    if (ti != null && ti < n) {
+      final x = xAt(ti);
+      final cross = Paint()
+        ..color = AppColors.textMuted.withValues(alpha: 0.5)
+        ..strokeWidth = 1;
+      _dashedV(canvas, Offset(x, plot.top - 4), Offset(x, plot.bottom), cross);
+
+      final p = pts[ti];
+      if (p != null) {
+        final c = colors[ti] ?? lineColor;
+        canvas.drawCircle(p, 10, Paint()..color = c.withValues(alpha: 0.2));
+        canvas.drawCircle(p, 6, Paint()..color = AppColors.surface);
+        canvas.drawCircle(p, 4.5, Paint()..color = c);
+      }
+
+      final tp = _tp(
+        tooltips[ti],
+        const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+        ),
+      );
+      final w = tp.width + 20;
+      final left = (x - w / 2).clamp(0.0, size.width - w);
+      final rect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(left, 0, w, 26),
+        const Radius.circular(10),
+      );
+      canvas.drawRRect(rect, Paint()..color = AppColors.forestDeep);
+      tp.paint(canvas, Offset(left + 10, (26 - tp.height) / 2));
+    }
+  }
+
+  void _dashed(Canvas canvas, Offset a, Offset b, Paint paint) {
+    var x = a.dx;
+    while (x < b.dx) {
+      canvas.drawLine(
+        Offset(x, a.dy),
+        Offset((x + 4).clamp(a.dx, b.dx), a.dy),
+        paint,
+      );
+      x += 8;
+    }
+  }
+
+  void _dashedV(Canvas canvas, Offset a, Offset b, Paint paint) {
+    var y = a.dy;
+    while (y < b.dy) {
+      canvas.drawLine(
+        Offset(a.dx, y),
+        Offset(a.dx, (y + 4).clamp(a.dy, b.dy)),
+        paint,
+      );
+      y += 8;
     }
   }
 
   @override
-  bool shouldRepaint(covariant _WeekChartPainter old) => old.values != values;
+  bool shouldRepaint(covariant _TrendPainter old) => true;
 }
 
-/// Ilustrasi bukit minimalis untuk bagian bawah kartu sapaan.
-/// Dibuat ringan dan tidak menutupi teks maupun avatar.
-class _GreetingNaturePainter extends CustomPainter {
-  const _GreetingNaturePainter();
+// ─────────────────────────────────────────────
+// Distribusi mood
+// ─────────────────────────────────────────────
+
+class _FrequensiCard extends StatelessWidget {
+  final List<MoodEntry> entries;
+  final _MoodData Function(int level) moodData;
+
+  const _FrequensiCard({required this.entries, required this.moodData});
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-
-    final backHill = Path()
-      ..moveTo(0, h * 0.72)
-      ..quadraticBezierTo(w * 0.24, h * 0.12, w * 0.49, h * 0.64)
-      ..quadraticBezierTo(w * 0.76, h * 1.05, w, h * 0.38)
-      ..lineTo(w, h)
-      ..lineTo(0, h)
-      ..close();
-
-    canvas.drawPath(
-      backHill,
-      Paint()..color = const Color(0xFFD8E7CE),
-    );
-
-    final frontHill = Path()
-      ..moveTo(0, h * 0.84)
-      ..quadraticBezierTo(w * 0.32, h * 0.42, w * 0.62, h * 0.82)
-      ..quadraticBezierTo(w * 0.83, h * 1.05, w, h * 0.68)
-      ..lineTo(w, h)
-      ..lineTo(0, h)
-      ..close();
-
-    canvas.drawPath(
-      frontHill,
-      Paint()..color = const Color(0xFFBBD3A9),
-    );
-
-    final grassPaint = Paint()
-      ..color = const Color(0xFF6F9665).withValues(alpha: 0.78)
-      ..strokeWidth = 1
-      ..strokeCap = StrokeCap.round;
-
-    for (final x in [w * 0.07, w * 0.13, w * 0.77, w * 0.84, w * 0.94]) {
-      canvas.drawLine(Offset(x, h), Offset(x - 2, h * 0.65), grassPaint);
-      canvas.drawLine(Offset(x, h), Offset(x + 3, h * 0.73), grassPaint);
+  Widget build(BuildContext context) {
+    final counts = <int, int>{for (var l = 1; l <= 5; l++) l: 0};
+    for (final e in entries) {
+      counts[e.level] = (counts[e.level] ?? 0) + 1;
     }
+    final total = entries.length;
+
+    int? topLevel;
+    if (total > 0) {
+      topLevel = counts.entries
+          .reduce((a, b) => a.value >= b.value ? a : b)
+          .key;
+    }
+
+    return SoftCard(
+      padding: const EdgeInsets.all(Space.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text('Distribusi mood', style: AppText.titleLarge),
+              ),
+              if (topLevel != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: moodData(topLevel).tint,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    'Paling sering: ${moodData(topLevel).label}',
+                    style: AppText.caption.copyWith(
+                      color: moodData(topLevel).color,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Seberapa sering tiap mood muncul di seluruh catatanmu.',
+            style: AppText.bodySmall,
+          ),
+          const SizedBox(height: Space.xl),
+          if (total == 0)
+            const Text(
+              'Belum ada data. Distribusi muncul setelah kamu check-in.',
+              style: AppText.bodySmall,
+            )
+          else ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: SizedBox(
+                height: 14,
+                child: Row(
+                  children: [
+                    for (var l = 1; l <= 5; l++)
+                      if (counts[l]! > 0)
+                        Expanded(
+                          flex: counts[l]!,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 1),
+                            child: ColoredBox(color: moodData(l).color),
+                          ),
+                        ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: Space.lg),
+            for (var l = 5; l >= 1; l--) ...[
+              _DistributionRow(
+                mood: moodData(l),
+                count: counts[l]!,
+                percent: total == 0 ? 0 : (counts[l]! * 100 / total).round(),
+              ),
+              if (l > 1) const SizedBox(height: Space.md),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DistributionRow extends StatelessWidget {
+  final _MoodData mood;
+  final int count;
+  final int percent;
+
+  const _DistributionRow({
+    required this.mood,
+    required this.count,
+    required this.percent,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = count == 0;
+    return Row(
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: muted ? AppColors.border : mood.color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: Space.sm),
+        Expanded(
+          child: Text(
+            mood.label,
+            style: AppText.bodySmall.copyWith(
+              color: muted ? AppColors.textLight : AppColors.textDark,
+            ),
+          ),
+        ),
+        Text(
+          '$count kali',
+          style: AppText.caption.copyWith(color: AppColors.textMuted),
+        ),
+        const SizedBox(width: Space.md),
+        SizedBox(
+          width: 40,
+          child: Text(
+            '$percent%',
+            textAlign: TextAlign.end,
+            style: AppText.titleSmall.copyWith(
+              color: muted ? AppColors.textLight : AppColors.textDark,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+// History
+// ─────────────────────────────────────────────
+
+class _HistoryCard extends StatelessWidget {
+  final List<MoodEntry> entries;
+  final _MoodData Function(int level) moodData;
+  final ValueChanged<MoodEntry> onEditEntry;
+  final ValueChanged<MoodEntry> onDeleteEntry;
+
+  const _HistoryCard({
+    required this.entries,
+    required this.moodData,
+    required this.onEditEntry,
+    required this.onDeleteEntry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final sorted = [...entries]..sort((a, b) => b.date.compareTo(a.date));
+    final visible = sorted.take(5).toList();
+
+    return SoftCard(
+      padding: const EdgeInsets.symmetric(vertical: Space.sm),
+      child: Column(
+        children: [
+          for (int index = 0; index < visible.length; index++) ...[
+            _HistoryRow(
+              entry: visible[index],
+              mood: moodData(visible[index].level),
+              onEdit: () => onEditEntry(visible[index]),
+              onDelete: () => onDeleteEntry(visible[index]),
+            ),
+            if (index < visible.length - 1)
+              const Divider(height: 1, indent: 72, endIndent: Space.lg),
+          ],
+          if (entries.length > 5)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                Space.lg,
+                Space.md,
+                Space.lg,
+                Space.sm,
+              ),
+              child: Text(
+                'Menampilkan 5 check-in terakhir.',
+                style: AppText.caption,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HistoryRow extends StatelessWidget {
+  final MoodEntry entry;
+  final _MoodData mood;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const _HistoryRow({
+    required this.entry,
+    required this.mood,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  void _confirmDelete(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Hapus check-in ini?'),
+        content: Text(
+          'Catatan untuk tanggal ${_formatDate(entry.date)} akan dihapus. Tindakan ini bisa dibatalkan lewat snackbar.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              onDelete();
+            },
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
-  bool shouldRepaint(covariant _GreetingNaturePainter oldDelegate) => false;
-}
+  Widget build(BuildContext context) {
+    final isToday =
+        entry.date ==
+        DateTime.now().copyWith(
+          hour: 0,
+          minute: 0,
+          second: 0,
+          millisecond: 0,
+          microsecond: 0,
+        );
 
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: Space.lg, vertical: 12),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(color: mood.tint, shape: BoxShape.circle),
+            child: Icon(mood.icon, color: mood.color, size: 22),
+          ),
+          const SizedBox(width: Space.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isToday ? 'Hari ini' : _formatDate(entry.date),
+                  style: AppText.titleSmall,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  [
+                    mood.label,
+                    if (entry.tags.isNotEmpty) entry.tags.take(2).join(', '),
+                  ].join(' · '),
+                  style: AppText.bodySmall,
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Perbarui check-in ${_formatDate(entry.date)}',
+            onPressed: onEdit,
+            icon: const Icon(Icons.edit_outlined),
+          ),
+          IconButton(
+            tooltip: 'Hapus check-in ${_formatDate(entry.date)}',
+            onPressed: () => _confirmDelete(context),
+            icon: const Icon(Icons.delete_outline_rounded),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) =>
+      '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+}

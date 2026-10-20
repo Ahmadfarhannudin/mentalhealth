@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+
 import '../core/theme/app_colors.dart';
+import '../core/theme/app_text.dart';
+import '../core/ui/components.dart';
 import '../coping/coping_exercises.dart';
-import '../coping/exercise_ui.dart';
 import '../coping/exercise_detail_screen.dart';
 
 class CbtExercisesScreen extends StatefulWidget {
@@ -13,17 +15,26 @@ class CbtExercisesScreen extends StatefulWidget {
 
 class _CbtExercisesScreenState extends State<CbtExercisesScreen> {
   String _category = 'Semua';
+  String _query = '';
+  final TextEditingController _searchController = TextEditingController();
   bool _favoritesOnly = false;
 
-  // TODO: simpan ke penyimpanan lokal / backend agar tidak hilang saat app ditutup.
+  // TODO: simpan favorit dan progres ke penyimpanan lokal.
   final Set<String> _favorites = {};
   final Set<String> _done = {};
 
   List<CopingExercise> get _filtered => copingExercises.where((e) {
-        final catOk = _category == 'Semua' || e.category == _category;
-        final favOk = !_favoritesOnly || _favorites.contains(e.id);
-        return catOk && favOk;
-      }).toList();
+    final catOk = _category == 'Semua' || e.category == _category;
+    final favOk = !_favoritesOnly || _favorites.contains(e.id);
+    final query = _query.trim().toLowerCase();
+    final queryOk =
+        query.isEmpty ||
+        e.title.toLowerCase().contains(query) ||
+        e.description.toLowerCase().contains(query) ||
+        e.category.toLowerCase().contains(query) ||
+        e.kindLabel.toLowerCase().contains(query);
+    return catOk && favOk && queryOk;
+  }).toList();
 
   Future<void> _open(CopingExercise ex) async {
     final completed = await Navigator.of(context).push<bool>(
@@ -32,7 +43,9 @@ class _CbtExercisesScreenState extends State<CbtExercisesScreen> {
           exercise: ex,
           isFavorite: _favorites.contains(ex.id),
           onToggleFavorite: () => setState(() {
-            _favorites.contains(ex.id) ? _favorites.remove(ex.id) : _favorites.add(ex.id);
+            _favorites.contains(ex.id)
+                ? _favorites.remove(ex.id)
+                : _favorites.add(ex.id);
           }),
         ),
       ),
@@ -41,80 +54,177 @@ class _CbtExercisesScreenState extends State<CbtExercisesScreen> {
   }
 
   @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final items = _filtered;
+    final progress = copingExercises.isEmpty
+        ? 0.0
+        : _done.length / copingExercises.length;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        title: const Text(
-          'Latihan Coping',
-          style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.sageDeep),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, size: 20),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-        actions: [
-          IconButton(
-            tooltip: _favoritesOnly ? 'Tampilkan semua' : 'Tampilkan favorit',
-            icon: Icon(
-              _favoritesOnly ? Icons.favorite : Icons.favorite_border,
-              size: 22,
-              color: _favoritesOnly ? AppColors.sage : null,
-            ),
-            onPressed: () => setState(() => _favoritesOnly = !_favoritesOnly),
-          ),
-        ],
-      ),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-            child: _ProgressCard(done: _done.length, total: copingExercises.length),
+            padding: const EdgeInsets.fromLTRB(
+              Space.page,
+              Space.md,
+              Space.page,
+              0,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Latihan', style: AppText.displayMedium),
+                          SizedBox(height: 2),
+                          Text(
+                            'Latihan singkat untuk meredakan pikiran yang ramai.',
+                            style: AppText.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: _favoritesOnly
+                          ? 'Tampilkan semua latihan'
+                          : 'Tampilkan favorit',
+                      onPressed: () =>
+                          setState(() => _favoritesOnly = !_favoritesOnly),
+                      icon: Icon(
+                        _favoritesOnly
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
+                        color: _favoritesOnly
+                            ? AppColors.clayDeep
+                            : AppColors.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: Space.md),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          minHeight: 6,
+                          backgroundColor: AppColors.forestMist,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: Space.md),
+                    Text(
+                      '${_done.length} dari ${copingExercises.length} selesai',
+                      style: AppText.caption,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: Space.lg),
+                SizedBox(
+                  height: 48,
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (value) => setState(() => _query = value),
+                    textInputAction: TextInputAction.search,
+                    decoration: InputDecoration(
+                      hintText: 'Cari latihan atau topik',
+                      prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                      suffixIcon: _query.isEmpty
+                          ? null
+                          : IconButton(
+                              tooltip: 'Hapus pencarian',
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _query = '');
+                              },
+                              icon: const Icon(Icons.close_rounded, size: 18),
+                            ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
+          const SizedBox(height: Space.md),
           SizedBox(
-            height: 44,
+            height: 46,
             child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: Space.page),
               scrollDirection: Axis.horizontal,
               itemCount: exerciseCategories.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              separatorBuilder: (_, _) => const SizedBox(width: Space.sm),
               itemBuilder: (_, i) {
                 final cat = exerciseCategories[i];
-                final sel = cat == _category;
-                return ChoiceChip(
-                  label: Text(cat),
-                  selected: sel,
-                  showCheckmark: false,
-                  onSelected: (_) => setState(() => _category = cat),
-                  backgroundColor: AppColors.surface,
-                  selectedColor: AppColors.sage,
-                  side: BorderSide(color: sel ? AppColors.sage : AppColors.border),
-                  shape: const StadiumBorder(),
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  labelStyle: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: sel ? Colors.white : AppColors.textBody,
-                  ),
+                return QuietPill(
+                  label: cat,
+                  selected: cat == _category,
+                  onTap: () => setState(() => _category = cat),
                 );
               },
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: Space.md),
           Expanded(
             child: items.isEmpty
-                ? const _EmptyState()
-                : ListView.builder(
-                    // ruang ekstra agar tidak tertutup bottom navigation melayang
-                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 120),
+                ? ListView(
+                    padding: const EdgeInsets.fromLTRB(
+                      Space.page,
+                      Space.sm,
+                      Space.page,
+                      Space.xxl,
+                    ),
+                    children: [
+                      QuietEmptyState(
+                        icon: _favoritesOnly
+                            ? Icons.favorite_border_rounded
+                            : Icons.search_off_rounded,
+                        title: _query.trim().isNotEmpty
+                            ? 'Latihan tidak ditemukan'
+                            : _favoritesOnly
+                            ? 'Belum ada favorit'
+                            : 'Belum ada latihan di kategori ini',
+                        message: _query.trim().isNotEmpty
+                            ? 'Coba kata kunci lain, atau pilih kategori lain.'
+                            : _favoritesOnly
+                            ? 'Buka sebuah latihan, lalu simpan dengan ikon hati.'
+                            : 'Pilih kategori lain untuk melihat latihan yang tersedia.',
+                        action: _favoritesOnly
+                            ? TextButton(
+                                onPressed: () =>
+                                    setState(() => _favoritesOnly = false),
+                                child: const Text('Tampilkan semua'),
+                              )
+                            : null,
+                      ),
+                    ],
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(
+                      Space.page,
+                      0,
+                      Space.page,
+                      Space.xxl,
+                    ),
                     itemCount: items.length,
+                    separatorBuilder: (_, _) =>
+                        const SizedBox(height: Space.md),
                     itemBuilder: (_, i) {
                       final ex = items[i];
-                      return _ExerciseCard(
+                      return _ExerciseRow(
                         exercise: ex,
                         done: _done.contains(ex.id),
                         favorite: _favorites.contains(ex.id),
@@ -129,75 +239,13 @@ class _CbtExercisesScreenState extends State<CbtExercisesScreen> {
   }
 }
 
-class _ProgressCard extends StatelessWidget {
-  final int done;
-  final int total;
-  const _ProgressCard({required this.done, required this.total});
-
-  @override
-  Widget build(BuildContext context) {
-    final value = total == 0 ? 0.0 : done / total;
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: softCard(radius: 22),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 52,
-            height: 52,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                CircularProgressIndicator(
-                  value: value,
-                  strokeWidth: 5,
-                  backgroundColor: AppColors.sagePale,
-                  valueColor: const AlwaysStoppedAnimation(AppColors.sage),
-                ),
-                Text(
-                  '$done/$total',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.sageDeep,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 16),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Rutin kecil, dampak nyata',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.sageDeep,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'Latihan singkat yang diulang lebih efektif daripada sesekali lama.',
-                  style: TextStyle(fontSize: 12.5, height: 1.4, color: AppColors.textMuted),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ExerciseCard extends StatelessWidget {
+class _ExerciseRow extends StatelessWidget {
   final CopingExercise exercise;
   final bool done;
   final bool favorite;
   final VoidCallback onTap;
-  const _ExerciseCard({
+
+  const _ExerciseRow({
     required this.exercise,
     required this.done,
     required this.favorite,
@@ -206,149 +254,94 @@ class _ExerciseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = categoryAccent(exercise.category);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: const [
-            BoxShadow(color: Color(0x143B5A40), blurRadius: 20, offset: Offset(0, 8)),
-          ],
-        ),
-        child: Material(
-          color: AppColors.surface,
-          clipBehavior: Clip.antiAlias,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-            side: const BorderSide(color: AppColors.borderLight, width: 1.2),
-          ),
-          child: InkWell(
-            onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Row(
+    return Semantics(
+      button: true,
+      label:
+          '${exercise.title}, ${exercise.minutes} menit, ${done ? 'selesai' : 'belum selesai'}',
+      child: SoftCard(
+        onTap: onTap,
+        padding: const EdgeInsets.all(Space.lg),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: done ? AppColors.forestPale : AppColors.forestMist,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(exercise.icon, size: 22, color: AppColors.forestDeep),
+            ),
+            const SizedBox(width: Space.md),
+            Expanded(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Hero(
-                    tag: 'ex-icon-${exercise.id}',
-                    child: IconTile(icon: exercise.icon, accent: accent),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(exercise.title, style: AppText.titleSmall),
+                      ),
+                      if (favorite)
+                        const Padding(
+                          padding: EdgeInsets.only(left: 4),
+                          child: Icon(
+                            Icons.favorite_rounded,
+                            size: 14,
+                            color: AppColors.clay,
+                          ),
+                        ),
+                      const SizedBox(width: 6),
+                      Icon(
+                        done
+                            ? Icons.check_circle_rounded
+                            : Icons.chevron_right_rounded,
+                        size: 19,
+                        color: done ? AppColors.forest : AppColors.textLight,
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                exercise.category,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: accent,
-                                ),
-                              ),
-                            ),
-                            if (favorite)
-                              const Padding(
-                                padding: EdgeInsets.only(right: 6),
-                                child: Icon(Icons.favorite, size: 14, color: AppColors.sage),
-                              ),
-                            Icon(
-                              done ? Icons.check_circle : Icons.radio_button_unchecked,
-                              size: 20,
-                              color: done ? AppColors.sage : AppColors.textLight,
-                            ),
-                          ],
+                  const SizedBox(height: 4),
+                  Text(
+                    exercise.description,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.bodySmall,
+                  ),
+                  const SizedBox(height: Space.sm),
+                  Row(
+                    children: [
+                      Text('${exercise.minutes} menit', style: AppText.caption),
+                      const SizedBox(width: Space.sm),
+                      Container(
+                        width: 3,
+                        height: 3,
+                        decoration: const BoxDecoration(
+                          color: AppColors.textLight,
+                          shape: BoxShape.circle,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          exercise.title,
-                          style: const TextStyle(
-                            fontSize: 16.5,
-                            fontWeight: FontWeight.w700,
-                            height: 1.25,
-                            color: AppColors.sageDeep,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          exercise.description,
-                          maxLines: 2,
+                      ),
+                      const SizedBox(width: Space.sm),
+                      Flexible(
+                        child: Text(
+                          exercise.category,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            height: 1.45,
-                            color: AppColors.textMuted,
-                          ),
+                          style: AppText.caption,
                         ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            const Icon(Icons.timer_outlined, size: 15, color: AppColors.textMuted),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${exercise.minutes} menit',
-                              style: const TextStyle(fontSize: 12.5, color: AppColors.textMuted),
-                            ),
-                            const SizedBox(width: 12),
-                            Flexible(
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: AppColors.sagePale,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  exercise.kindLabel,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.sageDeep,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                      ),
+                      if (done) ...[
+                        const SizedBox(width: Space.sm),
+                        const StatusChip(
+                          label: 'Selesai',
+                          color: AppColors.forestDeep,
+                          background: AppColors.forestPale,
                         ),
                       ],
-                    ),
+                    ],
                   ),
                 ],
               ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.favorite_border, size: 40, color: AppColors.textLight),
-            SizedBox(height: 12),
-            Text(
-              'Belum ada latihan favorit',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.sageDeep),
-            ),
-            SizedBox(height: 4),
-            Text(
-              'Buka sebuah latihan lalu ketuk ikon hati untuk menyimpannya di sini.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, height: 1.4, color: AppColors.textMuted),
             ),
           ],
         ),

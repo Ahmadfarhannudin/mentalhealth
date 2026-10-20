@@ -1,7 +1,6 @@
 class MoodEntry {
   final String id;
   final int level; // 1 to 5
-  final String emoji;
   final String label;
   final String note;
   final DateTime timestamp;
@@ -9,7 +8,6 @@ class MoodEntry {
   MoodEntry({
     required this.id,
     required this.level,
-    required this.emoji,
     required this.label,
     required this.note,
     required this.timestamp,
@@ -56,11 +54,11 @@ class CbtExercise {
 
 class AppConstants {
   static final List<Map<String, dynamic>> moodOptions = [
-    {'level': 5, 'emoji': '🌿', 'label': 'Tenang', 'color': 0xFF7A9E7E},
-    {'level': 4, 'emoji': '🌱', 'label': 'Baik', 'color': 0xFFA8C4A0},
-    {'level': 3, 'emoji': '🌾', 'label': 'Biasa', 'color': 0xFFE8DCC6},
-    {'level': 2, 'emoji': '🍂', 'label': 'Lelah', 'color': 0xFFE9B9A3},
-    {'level': 1, 'emoji': '🌧️', 'label': 'Berat', 'color': 0xFFD4A08C},
+    {'level': 5, 'label': 'Tenang', 'color': 0xFF4F7D63},
+    {'level': 4, 'label': 'Baik', 'color': 0xFF7FA588},
+    {'level': 3, 'label': 'Biasa', 'color': 0xFFC9B98F},
+    {'level': 2, 'label': 'Lelah', 'color': 0xFFD9A183},
+    {'level': 1, 'label': 'Berat', 'color': 0xFFC08476},
   ];
 
   static final List<CbtExercise> sampleExercises = [
@@ -69,7 +67,8 @@ class AppConstants {
       title: 'Pernapasan Kotak 4-4-4-4',
       category: 'Pernapasan',
       duration: '3 menit',
-      description: 'Tenangkan sistem saraf parasimpatis dengan pola napas terstruktur.',
+      description:
+          'Tenangkan sistem saraf parasimpatis dengan pola napas terstruktur.',
       iconName: 'air',
     ),
     CbtExercise(
@@ -77,7 +76,8 @@ class AppConstants {
       title: 'Grounding 5-4-3-2-1',
       category: 'Kecemasan',
       duration: '5 menit',
-      description: 'Kembalikan fokus ke saat ini dengan melibatkan panca indra.',
+      description:
+          'Kembalikan fokus ke saat ini dengan melibatkan panca indra.',
       iconName: 'spa',
     ),
     CbtExercise(
@@ -93,7 +93,8 @@ class AppConstants {
       title: 'Meditasi Syukur Harian',
       category: 'Refleksi',
       duration: '4 menit',
-      description: 'Fokus pada hal kecil yang menenangkan dan memberi energi positif.',
+      description:
+          'Fokus pada hal kecil yang menenangkan dan memberi energi positif.',
       iconName: 'favorite',
     ),
   ];

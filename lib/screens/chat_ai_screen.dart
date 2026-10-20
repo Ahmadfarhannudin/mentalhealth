@@ -1,11 +1,13 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_text.dart';
+import '../core/ui/components.dart';
 
-/// Ruang Cerita AI
-/// Tampilan chat yang hangat, tenang, dan profesional.
-/// Mengikuti palet alami aplikasi: sage, cream, sand, lavender lembut.
+/// Ruang Cerita: percakapan pendamping untuk refleksi.
 class ChatAiScreen extends StatefulWidget {
   const ChatAiScreen({super.key});
 
@@ -13,16 +15,33 @@ class ChatAiScreen extends StatefulWidget {
   State<ChatAiScreen> createState() => _ChatAiScreenState();
 }
 
-class _ChatAiScreenState extends State<ChatAiScreen> {
+class _ChatAiScreenState extends State<ChatAiScreen>
+    with TickerProviderStateMixin {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<Map<String, dynamic>> _messages = [];
   bool _isTyping = false;
+  int _conversationId = 0;
+
+  late final AnimationController _dotAnimController;
 
   @override
   void initState() {
     super.initState();
+
+    _dotAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    );
+
     _addWelcomeMessage();
+  }
+
+  /// Lift for one typing dot. Each dot gets a phase so they ripple.
+  double _dotOffset(double phase) {
+    final v = (_dotAnimController.value + phase) % 1.0;
+    if (v >= 0.5) return 0;
+    return -4 * math.sin(math.pi * (v / 0.5));
   }
 
   void _addWelcomeMessage() {
@@ -31,7 +50,7 @@ class _ChatAiScreenState extends State<ChatAiScreen> {
       setState(() {
         _messages.add({
           'sender': 'ai',
-          'text': 'Halo, aku di sini mendampingimu. Ada yang ingin kamu ceritakan hari ini?',
+          'text': 'Halo, aku di sini menemanimu. Ada yang ingin kamu ceritakan hari ini?',
           'time': _formattedTime(),
         });
       });
@@ -48,20 +67,21 @@ class _ChatAiScreenState extends State<ChatAiScreen> {
     if (text.isEmpty) return;
 
     setState(() {
-      _messages.add({
-        'sender': 'user',
-        'text': text,
-        'time': _formattedTime(),
-      });
+      _messages.add({'sender': 'user', 'text': text, 'time': _formattedTime()});
       _controller.clear();
       _isTyping = true;
     });
+    _dotAnimController.repeat();
+    final token = _conversationId;
 
     _scrollToBottom();
 
-    // Simulasi respons AI (ganti dengan integrasi backend)
+    // Simulasi respons. Ganti dengan integrasi backend bila siap.
     Future.delayed(const Duration(seconds: 1, milliseconds: 200), () {
-      if (!mounted) return;
+      if (!mounted || token != _conversationId) return;
+      _dotAnimController
+        ..stop()
+        ..value = 0;
       setState(() {
         _isTyping = false;
         _messages.add({
@@ -77,73 +97,76 @@ class _ChatAiScreenState extends State<ChatAiScreen> {
   String _generateAiResponse(String userText) {
     final lowered = userText.toLowerCase();
 
-    // Deteksi krisis / butuh bantuan darurat
     if (lowered.contains('bunuh diri') ||
         lowered.contains('menyakiti diri') ||
         lowered.contains('mati saja') ||
         lowered.contains('mengakhiri hidup')) {
-      return 'Kamu sangat berharga dan kamu tidak sendirian menghadapi ini. Jika kamu merasa kewalahan atau ada dorongan menyakiti diri, mohon segera hubungi layanan dukungan:\n\n• Hotline Kesehatan Jiwa Kemenkes: 119 ext 8\n• Layanan Sejiwa: 119\n• Hubungi teman terdekat atau tenaga profesional medis terdekat.';
+      return 'Kamu berharga dan tidak sendirian menghadapi ini. Jika ada dorongan menyakiti diri, hubungi bantuan sekarang:\n\n'
+          'Hotline Kesehatan Jiwa Kemenkes: 119 ext. 8\n'
+          'Layanan Sejiwa: 119\n\n'
+          'Hubungi juga orang terdekat atau tenaga medis di sekitarmu.';
     }
 
-    if (lowered.contains('cemas') || lowered.contains('takut') || lowered.contains('khawatir')) {
-      return 'Terima kasih sudah berbagi. Rasa cemas itu wajar, dan kamu tidak sendirian. Coba tarik napas perlahan: hirup 4 detik, tahan 4 detik, hembuskan 4 detik. Bagaimana perasaanmu sekarang?';
+    if (lowered.contains('cemas') ||
+        lowered.contains('takut') ||
+        lowered.contains('khawatir')) {
+      return 'Terima kasih sudah berbagi. Rasa cemas itu wajar, dan kamu tidak sendirian. '
+          'Coba tarik napas perlahan: hirup 4 detik, tahan 4 detik, hembuskan 4 detik. Bagaimana perasaanmu sekarang?';
     }
-    if (lowered.contains('sedih') || lowered.contains('nangis') || lowered.contains('kecewa')) {
-      return 'Aku turut merasakan apa yang kamu rasakan. Sedih adalah bagian dari proses. Izinkan dirimu merasakannya tanpa perlu buru-buru sembuh. Mau cerita lebih lanjut?';
+    if (lowered.contains('sedih') ||
+        lowered.contains('nangis') ||
+        lowered.contains('kecewa')) {
+      return 'Aku turut merasakan apa yang kamu rasakan. Sedih adalah bagian dari proses. '
+          'Izinkan dirimu merasakannya tanpa perlu buru-buru sembuh. Mau cerita lebih lanjut?';
     }
-    if (lowered.contains('lelah') || lowered.contains('capek') || lowered.contains('penat') || lowered.contains('burnout')) {
-      return 'Lelah itu tanda bahwa kamu telah berusaha keras. Istirahat bukan berarti menyerah. Kamu pantas mendapatkan waktu untuk memulihkan diri. Sudahkah kamu minum air hangat atau meluruskan punggung sejenak?';
+    if (lowered.contains('lelah') ||
+        lowered.contains('capek') ||
+        lowered.contains('penat') ||
+        lowered.contains('burnout')) {
+      return 'Lelah itu tanda bahwa kamu telah berusaha keras. Istirahat bukan berarti menyerah. '
+          'Sudahkah kamu minum air hangat atau meluruskan punggung sejenak?';
     }
-    if (lowered.contains('bahagia') || lowered.contains('senang') || lowered.contains('bangga')) {
-      return 'Senang mendengarnya! Rayakan momen kecil ini. Kebahagiaan yang kamu rasakan berharga, dan kamu layak merasakannya. Apa yang paling membuatmu bersyukur hari ini?';
+    if (lowered.contains('bahagia') ||
+        lowered.contains('senang') ||
+        lowered.contains('bangga')) {
+      return 'Senang mendengarnya. Rayakan momen kecil ini. Apa yang paling membuatmu bersyukur hari ini?';
     }
-    if (lowered.contains('tidur') || lowered.contains('insomnia') || lowered.contains('begadang')) {
+    if (lowered.contains('tidur') ||
+        lowered.contains('insomnia') ||
+        lowered.contains('begadang')) {
       return 'Pikiran yang ramai sering membuat mata sulit terpejam. Coba redupkan lampu, jauhkan layar ponsel sejenak, dan fokus pada hembusan napas yang panjang.';
     }
-    return 'Terima kasih sudah membagikan pikiranmu. Aku mendengarkan. Ceritakan lebih banyak jika kamu merasa nyaman, atau kita bisa lakukan latihan relaksasi bersama.';
+    return 'Terima kasih sudah membagikan pikiranmu. Aku mendengarkan. '
+        'Ceritakan lebih banyak jika kamu nyaman, atau kita bisa lakukan latihan relaksasi bersama.';
   }
 
   void _confirmClearMessages() {
-    showDialog(
+    showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: Text(
-          'Mulai Obrolan Baru?',
-          style: AppText.titleSmall,
-        ),
-        content: Text(
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Mulai obrolan baru?'),
+        content: const Text(
           'Percakapan saat ini akan dihapus dari layar demi privasimu.',
-          style: AppText.bodyMedium,
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Batal',
-              style: AppText.labelLarge.copyWith(color: AppColors.textMuted),
-            ),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Batal'),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.terracotta,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
+          TextButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
+              _conversationId++;
+              _dotAnimController
+                ..stop()
+                ..value = 0;
               setState(() {
                 _messages.clear();
+                _isTyping = false;
               });
               _addWelcomeMessage();
             },
-            child: const Text('Hapus & Mulai Ulang'),
+            child: const Text('Hapus dan mulai'),
           ),
         ],
       ),
@@ -155,7 +178,7 @@ class _ChatAiScreenState extends State<ChatAiScreen> {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 280),
           curve: Curves.easeOutCubic,
         );
       }
@@ -171,144 +194,96 @@ class _ChatAiScreenState extends State<ChatAiScreen> {
   void dispose() {
     _controller.dispose();
     _scrollController.dispose();
+    _dotAnimController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.cream,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            _buildDisclaimerBanner(),
-            Expanded(
-              child: _buildMessageList(),
-            ),
-            if (_messages.length <= 2) _buildQuickPrompts(),
-            _buildInputArea(),
-          ],
-        ),
+      backgroundColor: Colors.transparent,
+      body: Column(
+        children: [
+          _buildHeader(),
+          _buildDisclaimerBanner(),
+          Expanded(child: _buildMessageList()),
+          if (_messages.length <= 2) _buildQuickPrompts(),
+          _buildInputArea(),
+        ],
       ),
     );
   }
 
-  // =========================================================
-  // HEADER
-  // =========================================================
+  // ── Header ─────────────────────────────────────────────────
+
   Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(18, 12, 18, 10),
-      decoration: const BoxDecoration(
-        color: AppColors.cream,
-        border: Border(
-          bottom: BorderSide(color: AppColors.divider, width: 1),
-        ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        Space.page,
+        Space.md,
+        Space.sm,
+        Space.md,
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.sagePale,
-              border: Border.all(color: AppColors.sageLight, width: 1.5),
-            ),
-            child: const Icon(
-              Icons.favorite_border_rounded,
-              color: AppColors.sage,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Ruang Cerita',
-                  style: AppText.titleMedium.copyWith(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                Text('Ruang Cerita', style: AppText.displayMedium),
                 const SizedBox(height: 2),
-                Row(
-                  children: [
-                    Container(
-                      width: 7,
-                      height: 7,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.sage,
-                      ),
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      'AI siap mendampingi',
-                      style: AppText.caption.copyWith(
-                        color: AppColors.sageDark,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+                Text(
+                  'Pendamping refleksi, bukan terapis',
+                  style: AppText.bodySmall,
                 ),
               ],
             ),
           ),
           IconButton(
+            tooltip: 'Mulai ulang percakapan',
             onPressed: _messages.isEmpty ? null : _confirmClearMessages,
-            icon: const Icon(
-              Icons.refresh_rounded,
-              color: AppColors.textMuted,
-              size: 22,
-            ),
-            tooltip: 'Mulai Ulang Percakapan',
+            icon: const Icon(Icons.refresh_rounded, size: 20),
           ),
           IconButton(
-            onPressed: () => _showInfoDialog(),
-            icon: const Icon(
-              Icons.info_outline_rounded,
-              color: AppColors.textMuted,
-              size: 22,
-            ),
             tooltip: 'Tentang Ruang Cerita',
+            onPressed: _showInfoDialog,
+            icon: const Icon(Icons.info_outline_rounded, size: 20),
           ),
         ],
       ),
     );
   }
 
-  // =========================================================
-  // DISCLAIMER BANNER
-  // =========================================================
   Widget _buildDisclaimerBanner() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: const BoxDecoration(
-        color: AppColors.lavenderPale,
-        border: Border(
-          bottom: BorderSide(color: AppColors.lavenderLight, width: 1),
-        ),
+      margin: const EdgeInsets.fromLTRB(
+        Space.page,
+        Space.md,
+        Space.page,
+        Space.xs,
+      ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: Space.md,
+        vertical: Space.sm,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.forestMist,
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
           const Icon(
             Icons.shield_outlined,
-            size: 14,
-            color: AppColors.lavenderDark,
+            size: 16,
+            color: AppColors.forestMid,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: Space.sm),
           Expanded(
             child: Text(
-              'AI bukan pengganti konselor atau psikolog profesional.',
-              style: AppText.caption.copyWith(
-                color: AppColors.lavenderDark,
-                fontSize: 11.5,
-              ),
+              'Bukan pengganti konselor atau psikolog profesional.',
+              style: AppText.caption.copyWith(color: AppColors.textBody),
             ),
           ),
         ],
@@ -316,38 +291,36 @@ class _ChatAiScreenState extends State<ChatAiScreen> {
     );
   }
 
-  // =========================================================
-  // MESSAGE LIST
-  // =========================================================
+  // ── Messages ───────────────────────────────────────────────
+
   Widget _buildMessageList() {
     if (_messages.isEmpty) {
       return const Center(
-        child: Text(
-          'Mulai percakapan...',
-          style: TextStyle(color: AppColors.textLight),
+        child: QuietEmptyState(
+          icon: Icons.forum_outlined,
+          title: 'Belum ada percakapan',
+          message: 'Tulis apa yang sedang kamu pikirkan untuk memulai.',
         ),
       );
     }
 
     return ListView.builder(
       controller: _scrollController,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      itemCount: _messages.length,
+      padding: const EdgeInsets.symmetric(
+        horizontal: Space.page,
+        vertical: Space.lg,
+      ),
+      itemCount: _messages.length + (_isTyping ? 1 : 0),
       itemBuilder: (context, index) {
-        final msg = _messages[index];
-        final isUser = msg['sender'] == 'user';
-        final isLast = index == _messages.length - 1;
+        if (index == _messages.length && _isTyping) {
+          return _buildTypingIndicator();
+        }
 
-        return Column(
-          children: [
-            _buildMessageBubble(
-              text: msg['text'],
-              time: msg['time'],
-              isUser: isUser,
-            ),
-            if (isLast && _isTyping && !isUser)
-              _buildTypingIndicator(),
-          ],
+        final msg = _messages[index];
+        return _buildMessageBubble(
+          text: msg['text'] as String,
+          time: msg['time'] as String,
+          isUser: msg['sender'] == 'user',
         );
       },
     );
@@ -359,215 +332,176 @@ class _ChatAiScreenState extends State<ChatAiScreen> {
     required bool isUser,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.only(bottom: Space.lg),
       child: Row(
-        mainAxisAlignment:
-            isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisAlignment: isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!isUser) ...[
-            Container(
-              width: 30,
-              height: 30,
-              margin: const EdgeInsets.only(right: 8, bottom: 2),
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.sagePale,
-              ),
-              child: const Icon(
-                Icons.spa_rounded,
-                size: 16,
-                color: AppColors.sage,
-              ),
-            ),
+            const _AssistantAvatar(size: 30),
+            const SizedBox(width: Space.sm),
           ],
           Flexible(
-            child: Container(
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.74,
-              ),
-              child: Column(
-                crossAxisAlignment:
-                    isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                children: [
-                  GestureDetector(
+            child: Column(
+              crossAxisAlignment: isUser
+                  ? CrossAxisAlignment.end
+                  : CrossAxisAlignment.start,
+              children: [
+                Semantics(
+                  label: isUser ? 'Pesanmu' : 'Pesan pendamping',
+                  child: GestureDetector(
                     onLongPress: () {
+                      HapticFeedback.lightImpact();
                       Clipboard.setData(ClipboardData(text: text));
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Pesan disalin'),
-                          duration: Duration(milliseconds: 1200),
-                        ),
+                        const SnackBar(content: Text('Pesan disalin')),
                       );
                     },
                     child: Container(
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.sizeOf(context).width * 0.72,
+                      ),
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
+                        horizontal: Space.lg,
+                        vertical: Space.md,
                       ),
                       decoration: BoxDecoration(
-                        color: isUser ? AppColors.sage : AppColors.surface,
+                        color: isUser ? AppColors.forest : AppColors.surface,
                         borderRadius: BorderRadius.only(
-                          topLeft: const Radius.circular(20),
-                          topRight: const Radius.circular(20),
-                          bottomLeft: Radius.circular(isUser ? 20 : 4),
-                          bottomRight: Radius.circular(isUser ? 4 : 20),
+                          topLeft: const Radius.circular(18),
+                          topRight: const Radius.circular(18),
+                          bottomLeft: Radius.circular(isUser ? 18 : 6),
+                          bottomRight: Radius.circular(isUser ? 6 : 18),
                         ),
                         border: isUser
                             ? null
-                            : Border.all(
-                                color: AppColors.borderLight,
-                                width: 1.2,
-                              ),
-                        boxShadow: isUser
-                            ? null
-                            : [
-                                BoxShadow(
-                                  color: AppColors.shadowLight,
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
+                            : Border.all(color: AppColors.borderLight),
                       ),
                       child: Text(
                         text,
                         style: AppText.bodyMedium.copyWith(
                           color: isUser ? Colors.white : AppColors.textDark,
-                          height: 1.5,
+                          height: 1.55,
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Text(
-                      time,
-                      style: AppText.caption.copyWith(
-                        fontSize: 10.5,
-                        color: AppColors.textLight,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 3),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Text(time, style: AppText.caption),
+                ),
+              ],
             ),
           ),
-          if (isUser) ...[
-            Container(
-              width: 30,
-              height: 30,
-              margin: const EdgeInsets.only(left: 8, bottom: 2),
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.sandLight,
-              ),
-              child: const Icon(
-                Icons.person_rounded,
-                size: 17,
-                color: AppColors.sageDark,
-              ),
-            ),
-          ],
         ],
       ),
     );
   }
 
   Widget _buildTypingIndicator() {
-    return Align(
-      alignment: Alignment.centerLeft,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Space.lg),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _AssistantAvatar(size: 30),
+          const SizedBox(width: Space.sm),
+          Semantics(
+            label: 'Pendamping sedang menulis',
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: Space.lg,
+                vertical: Space.md,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(18),
+                  topRight: Radius.circular(18),
+                  bottomLeft: Radius.circular(6),
+                  bottomRight: Radius.circular(18),
+                ),
+                border: Border.all(color: AppColors.borderLight),
+              ),
+              child: AnimatedBuilder(
+                animation: _dotAnimController,
+                builder: (context, child) => Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _dot(_dotOffset(0)),
+                    const SizedBox(width: 5),
+                    _dot(_dotOffset(0.16)),
+                    const SizedBox(width: 5),
+                    _dot(_dotOffset(0.32)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _dot(double offsetY) {
+    return Transform.translate(
+      offset: Offset(0, offsetY),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 14, left: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.borderLight, width: 1.2),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildDot(0),
-            const SizedBox(width: 4),
-            _buildDot(1),
-            const SizedBox(width: 4),
-            _buildDot(2),
-          ],
+        width: 7,
+        height: 7,
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          color: AppColors.forestMid,
         ),
       ),
     );
   }
 
-  Widget _buildDot(int index) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 400),
-      curve: Curves.easeInOut,
-      width: 6,
-      height: 6,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: AppColors.sageLight.withValues(
-          alpha: 0.4 + (index == 1 ? 0.4 : 0.0),
-        ),
-      ),
-    );
-  }
+  // ── Quick prompts ──────────────────────────────────────────
 
-  // =========================================================
-  // QUICK PROMPTS
-  // =========================================================
   Widget _buildQuickPrompts() {
-    final prompts = [
+    const prompts = [
       'Aku merasa cemas',
       'Aku sedih hari ini',
       'Butuh tenang sejenak',
-      'Ceritakan tentang mindfulness',
+      'Cara mulai mindfulness',
     ];
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      child: SingleChildScrollView(
+    return SizedBox(
+      height: 56,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Space.page,
+          vertical: Space.sm,
+        ),
         scrollDirection: Axis.horizontal,
-        child: Row(
-          children: prompts.map((prompt) {
-            return Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: ActionChip(
-                onPressed: () => _sendQuickPrompt(prompt),
-                backgroundColor: AppColors.peachPale,
-                side: const BorderSide(color: AppColors.peachLight, width: 1),
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                label: Text(
-                  prompt,
-                  style: AppText.bodySmall.copyWith(
-                    color: AppColors.terracotta,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12.5,
-                  ),
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-            );
-          }).toList(),
+        itemCount: prompts.length,
+        separatorBuilder: (_, _) => const SizedBox(width: Space.sm),
+        itemBuilder: (_, i) => QuietPill(
+          label: prompts[i],
+          onTap: () => _sendQuickPrompt(prompts[i]),
         ),
       ),
     );
   }
 
-  // =========================================================
-  // INPUT AREA
-  // =========================================================
+  // ── Input ──────────────────────────────────────────────────
+
   Widget _buildInputArea() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+      padding: const EdgeInsets.fromLTRB(
+        Space.page,
+        Space.sm,
+        Space.page,
+        Space.md,
+      ),
       decoration: const BoxDecoration(
-        color: AppColors.cream,
-        border: Border(
-          top: BorderSide(color: AppColors.divider, width: 1),
-        ),
+        color: AppColors.surface,
+        border: Border(top: BorderSide(color: AppColors.borderLight)),
       ),
       child: SafeArea(
         top: false,
@@ -575,49 +509,31 @@ class _ChatAiScreenState extends State<ChatAiScreen> {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: AppColors.border, width: 1.2),
-                ),
-                child: TextField(
-                  controller: _controller,
-                  maxLines: 5,
-                  minLines: 1,
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: (_) => _sendMessage(),
-                  style: AppText.bodyMedium.copyWith(
-                    color: AppColors.textDark,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'Tulis perasaanmu di sini...',
-                    hintStyle: AppText.bodyMedium.copyWith(
-                      color: AppColors.textLight,
-                    ),
-                    contentPadding: const EdgeInsets.fromLTRB(18, 12, 14, 12),
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
+              child: TextField(
+                controller: _controller,
+                maxLines: 5,
+                minLines: 1,
+                textInputAction: TextInputAction.send,
+                textCapitalization: TextCapitalization.sentences,
+                onSubmitted: (_) => _sendMessage(),
+                decoration: const InputDecoration(
+                  hintText: 'Tulis perasaanmu di sini',
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 8),
-            GestureDetector(
-              onTap: _sendMessage,
-              child: Container(
-                width: 46,
-                height: 46,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.sage,
-                ),
-                child: const Icon(
-                  Icons.arrow_upward_rounded,
-                  color: Colors.white,
-                  size: 22,
-                ),
+            const SizedBox(width: Space.sm),
+            IconButton.filled(
+              tooltip: 'Kirim pesan',
+              onPressed: _sendMessage,
+              icon: const Icon(Icons.arrow_upward_rounded, size: 20),
+              style: IconButton.styleFrom(
+                backgroundColor: AppColors.forest,
+                foregroundColor: Colors.white,
+                fixedSize: const Size(48, 48),
               ),
             ),
           ],
@@ -626,97 +542,78 @@ class _ChatAiScreenState extends State<ChatAiScreen> {
     );
   }
 
-  // =========================================================
-  // INFO DIALOG
-  // =========================================================
+  // ── Info dialog ────────────────────────────────────────────
+
   void _showInfoDialog() {
-    showDialog(
+    showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-        title: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.sagePale,
-              ),
-              child: const Icon(
-                Icons.favorite_border_rounded,
-                color: AppColors.sage,
-                size: 18,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              'Tentang Ruang Cerita',
-              style: AppText.titleSmall.copyWith(fontSize: 16),
-            ),
-          ],
-        ),
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(Icons.eco_outlined, color: AppColors.forest, size: 28),
+        title: const Text('Tentang Ruang Cerita'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Ruang Cerita adalah fitur percakapan dengan AI yang dirancang untuk mendampingimu berefleksi dan menenangkan pikiran.',
-              style: AppText.bodyMedium.copyWith(height: 1.55),
+            const Text(
+              'Ruang Cerita adalah percakapan dengan AI untuk menemanimu berefleksi dan menenangkan pikiran.',
             ),
-            const SizedBox(height: 12),
-            Text(
-              'Penting untuk diingat:',
-              style: AppText.labelSmall.copyWith(color: AppColors.textDark),
+            const SizedBox(height: Space.lg),
+            _infoItem(
+              Icons.medical_services_outlined,
+              'Bukan pengganti konselor atau psikolog profesional.',
             ),
-            const SizedBox(height: 6),
-            _buildInfoItem(
-              'AI ini bukan pengganti konselor atau psikolog profesional.',
+            const SizedBox(height: Space.sm),
+            _infoItem(
+              Icons.emergency_outlined,
+              'Jika kamu mengalami krisis, hubungi layanan darurat atau profesional kesehatan mental.',
             ),
-            _buildInfoItem(
-              'Jika kamu mengalami krisis, segera hubungi layanan darurat atau profesional kesehatan mental.',
-            ),
-            _buildInfoItem(
-              'Percakapan bersifat pribadi dan tidak disimpan secara permanen.',
+            const SizedBox(height: Space.sm),
+            _infoItem(
+              Icons.lock_outline_rounded,
+              'Percakapan bersifat pribadi dan tidak disimpan permanen.',
             ),
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Mengerti',
-              style: AppText.labelLarge.copyWith(color: AppColors.sage),
-            ),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Mengerti'),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildInfoItem(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            '• ',
-            style: TextStyle(
-              color: AppColors.sage,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          Expanded(
-            child: Text(
-              text,
-              style: AppText.bodySmall.copyWith(height: 1.45),
-            ),
-          ),
-        ],
+  Widget _infoItem(IconData icon, String text) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 17, color: AppColors.forestMid),
+        const SizedBox(width: Space.sm),
+        Expanded(child: Text(text, style: AppText.bodySmall)),
+      ],
+    );
+  }
+}
+
+class _AssistantAvatar extends StatelessWidget {
+  final double size;
+
+  const _AssistantAvatar({required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: const BoxDecoration(
+        color: AppColors.forestMist,
+        shape: BoxShape.circle,
+      ),
+      child: Icon(
+        Icons.eco_rounded,
+        size: size * 0.5,
+        color: AppColors.forestDeep,
       ),
     );
   }

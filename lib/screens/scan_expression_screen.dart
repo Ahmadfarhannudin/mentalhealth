@@ -11,14 +11,9 @@ import '../core/theme/app_colors.dart';
 
 class ExpressionResult {
   final int moodLevel;
-  final String emoji;
   final String label;
 
-  const ExpressionResult({
-    required this.moodLevel,
-    required this.emoji,
-    required this.label,
-  });
+  const ExpressionResult({required this.moodLevel, required this.label});
 }
 
 enum _ScanState { initializing, ready, scanning, done, error }
@@ -32,9 +27,7 @@ class ScanExpressionScreen extends StatefulWidget {
 
 class _ScanExpressionScreenState extends State<ScanExpressionScreen>
     with TickerProviderStateMixin, WidgetsBindingObserver {
-  late final AnimationController _pulseController;
   late final AnimationController _scanController;
-  late final Animation<double> _pulseAnim;
   late final Animation<double> _scanAnim;
 
   _ScanState _state = _ScanState.initializing;
@@ -55,20 +48,14 @@ class _ScanExpressionScreenState extends State<ScanExpressionScreen>
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat(reverse: true);
     _scanController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
     );
-    _pulseAnim = Tween<double>(begin: 0.96, end: 1.04).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
-    _scanAnim = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _scanController, curve: Curves.linear),
-    );
+    _scanAnim = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _scanController, curve: Curves.linear));
     WidgetsBinding.instance.addObserver(this);
     _initAll();
   }
@@ -76,7 +63,6 @@ class _ScanExpressionScreenState extends State<ScanExpressionScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _pulseController.dispose();
     _scanController.dispose();
     _disposeAll();
     super.dispose();
@@ -172,10 +158,12 @@ class _ScanExpressionScreenState extends State<ScanExpressionScreen>
   }
 
   void _setError(String msg) {
-    if (mounted) setState(() {
-      _state = _ScanState.error;
-      _errorMessage = msg;
-    });
+    if (mounted) {
+      setState(() {
+        _state = _ScanState.error;
+        _errorMessage = msg;
+      });
+    }
   }
 
   Future<void> _startScan() async {
@@ -361,51 +349,54 @@ class _ScanExpressionScreenState extends State<ScanExpressionScreen>
   };
 
   // ── Klasifikasi via 52 blendshapes MediaPipe ──
-  // 5=Tenang 😊, 4=Baik 🙂, 3=Biasa 😐, 2=Lelah 😔, 1=Berat 😢
+  // 5=Tenang, 4=Baik, 3=Biasa, 2=Lelah, 1=Berat
 
   ExpressionResult _classify(FaceBlendshapes bs) {
-    final smileL  = bs[FaceBlendshape.mouthSmileLeft]   ?? 0.0;
-    final smileR  = bs[FaceBlendshape.mouthSmileRight]  ?? 0.0;
-    final smile   = (smileL + smileR) / 2.0;
+    final smileL = bs[FaceBlendshape.mouthSmileLeft];
+    final smileR = bs[FaceBlendshape.mouthSmileRight];
+    final smile = (smileL + smileR) / 2.0;
 
-    final blinkL  = bs[FaceBlendshape.eyeBlinkLeft]     ?? 0.0;
-    final blinkR  = bs[FaceBlendshape.eyeBlinkRight]    ?? 0.0;
+    final blinkL = bs[FaceBlendshape.eyeBlinkLeft];
+    final blinkR = bs[FaceBlendshape.eyeBlinkRight];
     final eyeOpen = 1.0 - (blinkL + blinkR) / 2.0;
 
-    final browDownL = bs[FaceBlendshape.browDownLeft]   ?? 0.0;
-    final browDownR = bs[FaceBlendshape.browDownRight]  ?? 0.0;
-    final browDown  = (browDownL + browDownR) / 2.0;
-    final browInner = bs[FaceBlendshape.browInnerUp]    ?? 0.0;
+    final browDownL = bs[FaceBlendshape.browDownLeft];
+    final browDownR = bs[FaceBlendshape.browDownRight];
+    final browDown = (browDownL + browDownR) / 2.0;
+    final browInner = bs[FaceBlendshape.browInnerUp];
 
-    final frownL  = bs[FaceBlendshape.mouthFrownLeft]   ?? 0.0;
-    final frownR  = bs[FaceBlendshape.mouthFrownRight]  ?? 0.0;
-    final frown   = (frownL + frownR) / 2.0;
+    final frownL = bs[FaceBlendshape.mouthFrownLeft];
+    final frownR = bs[FaceBlendshape.mouthFrownRight];
+    final frown = (frownL + frownR) / 2.0;
 
-    final cheekL  = bs[FaceBlendshape.cheekSquintLeft]  ?? 0.0;
-    final cheekR  = bs[FaceBlendshape.cheekSquintRight] ?? 0.0;
-    final cheek   = (cheekL + cheekR) / 2.0;
+    final cheekL = bs[FaceBlendshape.cheekSquintLeft];
+    final cheekR = bs[FaceBlendshape.cheekSquintRight];
+    final cheek = (cheekL + cheekR) / 2.0;
 
-    final jawOpen = bs[FaceBlendshape.jawOpen]          ?? 0.0;
+    final jawOpen = bs[FaceBlendshape.jawOpen];
 
     // TENANG: senyum lebar + mata terbuka + pipi naik (senyum tulus)
     if (smile >= 0.55 && eyeOpen >= 0.60 && cheek >= 0.20) {
-      return const ExpressionResult(moodLevel: 5, emoji: '😊', label: 'Tenang');
+      return const ExpressionResult(moodLevel: 5, label: 'Tenang');
     }
     // BAIK: senyum ringan, mata cukup terbuka, tidak cemberut
     if (smile >= 0.30 && eyeOpen >= 0.50 && frown < 0.25) {
-      return const ExpressionResult(moodLevel: 4, emoji: '🙂', label: 'Baik');
+      return const ExpressionResult(moodLevel: 4, label: 'Baik');
     }
     // BERAT: alis turun/naik + cemberut + hampir tidak senyum
-    if ((browDown >= 0.35 || browInner >= 0.40) && frown >= 0.30 && smile < 0.15) {
-      return const ExpressionResult(moodLevel: 1, emoji: '😢', label: 'Berat');
+    if ((browDown >= 0.35 || browInner >= 0.40) &&
+        frown >= 0.30 &&
+        smile < 0.15) {
+      return const ExpressionResult(moodLevel: 1, label: 'Berat');
     }
     // LELAH: mata setengah tutup / alis turun / menguap
-    if (eyeOpen < 0.45 || (browDown >= 0.25 && smile < 0.20) ||
+    if (eyeOpen < 0.45 ||
+        (browDown >= 0.25 && smile < 0.20) ||
         (jawOpen > 0.30 && eyeOpen < 0.55)) {
-      return const ExpressionResult(moodLevel: 2, emoji: '😔', label: 'Lelah');
+      return const ExpressionResult(moodLevel: 2, label: 'Lelah');
     }
     // BIASA: ekspresi netral
-    return const ExpressionResult(moodLevel: 3, emoji: '😐', label: 'Biasa');
+    return const ExpressionResult(moodLevel: 3, label: 'Biasa');
   }
 
   ExpressionResult? _pickDominant() {
@@ -414,12 +405,29 @@ class _ScanExpressionScreenState extends State<ScanExpressionScreen>
     for (final r in _scanBuffer) {
       freq[r.moodLevel] = (freq[r.moodLevel] ?? 0) + 1;
     }
-    final topLevel = freq.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+    final topLevel = freq.entries
+        .reduce((a, b) => a.value >= b.value ? a : b)
+        .key;
     return _scanBuffer.firstWhere((r) => r.moodLevel == topLevel);
   }
 
   void _useMood() {
     if (_result != null) Navigator.pop(context, _result);
+  }
+
+  IconData _moodIcon(int level) {
+    switch (level) {
+      case 5:
+        return Icons.sentiment_very_satisfied_rounded;
+      case 4:
+        return Icons.sentiment_satisfied_rounded;
+      case 3:
+        return Icons.sentiment_neutral_rounded;
+      case 2:
+        return Icons.sentiment_dissatisfied_rounded;
+      default:
+        return Icons.sentiment_very_dissatisfied_rounded;
+    }
   }
 
   void _rescan() {
@@ -447,51 +455,69 @@ class _ScanExpressionScreenState extends State<ScanExpressionScreen>
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: AppColors.textDark),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            size: 20,
+            color: AppColors.textDark,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         titleSpacing: 0,
         title: const Text(
           'Scan Ekspresi',
-          style: TextStyle(color: AppColors.textDark, fontSize: 17, fontWeight: FontWeight.w700),
+          style: TextStyle(
+            color: AppColors.textDark,
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             children: [
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               _buildInfoBanner(),
               if (_noFaceWarning && _state == _ScanState.ready)
                 Padding(
                   padding: const EdgeInsets.only(top: 10),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
-                      color: Colors.red.shade50,
+                      color: AppColors.errorBg,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.red.shade200),
+                      border: Border.all(color: AppColors.errorSoft),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: 18),
+                        const Icon(
+                          Icons.warning_amber_rounded,
+                          color: AppColors.errorSoft,
+                          size: 18,
+                        ),
                         const SizedBox(width: 8),
                         const Expanded(
                           child: Text(
                             'Wajah tidak terdeteksi. Pastikan wajahmu masuk ke dalam bingkai dan pencahayaan cukup.',
-                            style: TextStyle(fontSize: 12, color: Colors.red),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.errorSoft,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
                 ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 20),
               Expanded(child: _buildCameraFrame()),
-              const SizedBox(height: 28),
+              const SizedBox(height: 20),
               _buildBottomSection(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
             ],
           ),
         ),
@@ -501,20 +527,24 @@ class _ScanExpressionScreenState extends State<ScanExpressionScreen>
 
   Widget _buildInfoBanner() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: AppColors.sagePale,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.sageLight.withValues(alpha: 0.5)),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.sageLight.withValues(alpha: 0.55)),
       ),
       child: const Row(
         children: [
-          Icon(Icons.info_outline_rounded, size: 18, color: AppColors.sage),
-          SizedBox(width: 10),
+          Icon(Icons.spa_rounded, size: 20, color: AppColors.sageDark),
+          SizedBox(width: 12),
           Expanded(
             child: Text(
               'Arahkan wajahmu ke kamera. Ekspresi terdeteksi otomatis lalu diisi ke mood hari ini.',
-              style: TextStyle(fontSize: 12.5, color: AppColors.textBody, height: 1.4),
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.textBody,
+                height: 1.45,
+              ),
             ),
           ),
         ],
@@ -524,115 +554,155 @@ class _ScanExpressionScreenState extends State<ScanExpressionScreen>
 
   Widget _buildCameraFrame() {
     return Center(
-      child: ScaleTransition(
-        scale: _state == _ScanState.ready ? _pulseAnim : const AlwaysStoppedAnimation(1.0),
-        child: Container(
-          width: 240,
-          height: 300,
-          decoration: BoxDecoration(
-            color: const Color(0xFFE4EDE0),
-            borderRadius: BorderRadius.circular(36),
-            border: Border.all(
-              color: _state == _ScanState.done ? AppColors.sage : AppColors.sageLight,
-              width: _state == _ScanState.done ? 2.5 : 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.sage.withValues(alpha: 0.12),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
-              ),
-            ],
+      child: Container(
+        width: 260,
+        height: 320,
+        decoration: BoxDecoration(
+          color: AppColors.forestMist,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: _state == _ScanState.done
+                ? AppColors.sage
+                : AppColors.sageLight,
+            width: _state == _ScanState.done ? 2 : 1,
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(34),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                _buildCameraContent(),
-                CustomPaint(size: const Size(240, 300), painter: _FaceGuidePainter()),
-                if (_state == _ScanState.scanning)
-                  AnimatedBuilder(
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(38),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              _buildCameraContent(),
+              CustomPaint(
+                size: const Size(260, 320),
+                painter: _FaceGuidePainter(),
+              ),
+              if (_state == _ScanState.scanning)
+                Positioned.fill(
+                  child: AnimatedBuilder(
                     animation: _scanAnim,
-                    builder: (_, __) => Positioned(
-                      top: _scanAnim.value * 280,
-                      left: 0, right: 0,
+                    builder: (_, _) => Align(
+                      alignment: Alignment(0, _scanAnim.value * 2 - 1),
                       child: Container(
                         height: 2,
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(colors: [
-                            Colors.transparent,
-                            AppColors.sage.withValues(alpha: 0.8),
-                            Colors.transparent,
-                          ]),
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.transparent,
+                              AppColors.sage.withValues(alpha: 0.8),
+                              Colors.transparent,
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                if (_state == _ScanState.scanning && _liveResult != null)
-                  Positioned(
-                    bottom: 16,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.45),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '${_liveResult!.emoji}  ${_liveResult!.label}',
-                        style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
-                      ),
+                ),
+              if (_state == _ScanState.scanning && _liveResult != null)
+                Positioned(
+                  bottom: 16,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 6,
                     ),
-                  ),
-                if (_state == _ScanState.scanning && _noFaceWarning)
-                  Positioned(
-                    top: 16, left: 12, right: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade700.withValues(alpha: 0.85),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.warning_amber_rounded, color: Colors.white, size: 16),
-                          SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              'Wajah tidak terdeteksi. Arahkan kamera ke wajahmu.',
-                              style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                        ],
-                      ),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.45),
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                  ),
-                if (_state == _ScanState.done && _result != null)
-                  Container(
-                    color: Colors.black.withValues(alpha: 0.35),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(_result!.emoji, style: const TextStyle(fontSize: 64)),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.9),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            _result!.label,
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark),
+                        Icon(
+                          _moodIcon(_liveResult!.moodLevel),
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          _liveResult!.label,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
                     ),
                   ),
-                ..._corners(),
-              ],
-            ),
+                ),
+              if (_state == _ScanState.scanning && _noFaceWarning)
+                Positioned(
+                  top: 16,
+                  left: 12,
+                  right: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2C4F40).withValues(alpha: 0.9),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                        SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Wajah tidak terdeteksi. Arahkan kamera ke wajahmu.',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              if (_state == _ScanState.done && _result != null)
+                Container(
+                  color: Colors.black.withValues(alpha: 0.35),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _moodIcon(_result!.moodLevel),
+                        size: 56,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          _result!.label,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ..._corners(),
+            ],
           ),
         ),
       ),
@@ -643,22 +713,35 @@ class _ScanExpressionScreenState extends State<ScanExpressionScreen>
     switch (_state) {
       case _ScanState.initializing:
         return Container(
-          color: const Color(0xFFD4E3CF),
-          child: const Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.sage)),
+          color: AppColors.forestPale,
+          child: const Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: AppColors.sage,
+            ),
+          ),
         );
       case _ScanState.error:
         return Container(
-          color: const Color(0xFFD4E3CF),
+          color: AppColors.forestPale,
           padding: const EdgeInsets.all(16),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.videocam_off_rounded, size: 48, color: AppColors.sage.withValues(alpha: 0.5)),
+              Icon(
+                Icons.videocam_off_rounded,
+                size: 42,
+                color: AppColors.sageDark.withValues(alpha: 0.75),
+              ),
               const SizedBox(height: 12),
               Text(
                 _errorMessage ?? 'Kamera tidak tersedia.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 12, color: AppColors.textBody),
+                style: const TextStyle(
+                  fontSize: 14,
+                  height: 1.45,
+                  color: AppColors.textDark,
+                ),
               ),
             ],
           ),
@@ -672,21 +755,37 @@ class _ScanExpressionScreenState extends State<ScanExpressionScreen>
             child: FittedBox(
               fit: BoxFit.cover,
               child: SizedBox(
-                width: ctrl.value.previewSize?.height ?? 240,
-                height: ctrl.value.previewSize?.width ?? 300,
+                width: ctrl.value.previewSize?.height ?? 260,
+                height: ctrl.value.previewSize?.width ?? 320,
                 child: CameraPreview(ctrl),
               ),
             ),
           );
         }
-        return Container(color: const Color(0xFFD4E3CF));
+        return Container(color: AppColors.forestPale);
     }
   }
 
   Widget _buildBottomSection() {
     switch (_state) {
       case _ScanState.initializing:
-        return const Text('Memuat AI deteksi ekspresi…', style: TextStyle(fontSize: 14, color: AppColors.textMuted));
+        return const Column(
+          children: [
+            SizedBox(
+              width: 26,
+              height: 26,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: AppColors.sage,
+              ),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'Menyiapkan kamera dan AI…',
+              style: TextStyle(fontSize: 14, color: AppColors.textBody),
+            ),
+          ],
+        );
       case _ScanState.error:
         return SizedBox(
           width: double.infinity,
@@ -695,27 +794,47 @@ class _ScanExpressionScreenState extends State<ScanExpressionScreen>
             icon: const Icon(Icons.refresh_rounded, size: 20),
             label: const Text('Coba Lagi'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.sage, foregroundColor: Colors.white,
+              backgroundColor: AppColors.sage,
+              foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)), elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              elevation: 0,
             ),
           ),
         );
       case _ScanState.ready:
         return Column(
           children: [
-            const Text('Siapkan wajahmu di dalam bingkai', style: TextStyle(fontSize: 14, color: AppColors.textMuted)),
-            const SizedBox(height: 20),
+            const Text(
+              'Posisikan wajah di dalam bingkai',
+              style: TextStyle(
+                fontSize: 14,
+                color: AppColors.textBody,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Cari cahaya yang cukup, lalu diam sejenak.',
+              style: TextStyle(fontSize: 13, color: AppColors.textMuted),
+            ),
+            const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: _startScan,
                 icon: const Icon(Icons.camera_alt_rounded, size: 20),
-                label: const Text('Mulai Deteksi'),
+                label: const Text('Mulai deteksi'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.sage, foregroundColor: Colors.white,
+                  backgroundColor: AppColors.sage,
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)), elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 0,
                 ),
               ),
             ),
@@ -724,21 +843,46 @@ class _ScanExpressionScreenState extends State<ScanExpressionScreen>
       case _ScanState.scanning:
         return Column(
           children: [
-            const SizedBox(width: 28, height: 28, child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.sage)),
+            const SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: AppColors.sage,
+              ),
+            ),
             const SizedBox(height: 12),
-            const Text('Mendeteksi ekspresi…', style: TextStyle(fontSize: 14, color: AppColors.textMuted)),
+            const Text(
+              'Tarik napas perlahan…',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textDark,
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Membaca ekspresi dengan tenang',
+              style: TextStyle(fontSize: 13, color: AppColors.textMuted),
+            ),
           ],
         );
       case _ScanState.done:
         return Column(
           children: [
             Text(
-              'Ekspresi terdeteksi: ${_result!.label} ${_result!.emoji}',
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark),
+              'Ekspresi terdeteksi: ${_result!.label}',
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textDark,
+              ),
             ),
             const SizedBox(height: 6),
-            Text('Mood level ${_result!.moodLevel} akan diisi otomatis.',
-                style: const TextStyle(fontSize: 13, color: AppColors.textMuted)),
+            Text(
+              'Hasil ini akan mengisi check-in mood hari ini.',
+              style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+            ),
             const SizedBox(height: 20),
             Row(
               children: [
@@ -751,7 +895,9 @@ class _ScanExpressionScreenState extends State<ScanExpressionScreen>
                       foregroundColor: AppColors.sage,
                       side: const BorderSide(color: AppColors.sageLight),
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
                   ),
                 ),
@@ -761,11 +907,15 @@ class _ScanExpressionScreenState extends State<ScanExpressionScreen>
                   child: ElevatedButton.icon(
                     onPressed: _useMood,
                     icon: const Icon(Icons.check_rounded, size: 18),
-                    label: const Text('Gunakan Mood Ini'),
+                    label: const Text('Gunakan mood ini'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.sage, foregroundColor: Colors.white,
+                      backgroundColor: AppColors.sage,
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 0,
                     ),
                   ),
                 ),
@@ -781,25 +931,57 @@ class _ScanExpressionScreenState extends State<ScanExpressionScreen>
     const w = 2.5;
     final color = AppColors.sage.withValues(alpha: 0.8);
     return [
-      Positioned(top: 12, left: 12, child: _corner(size, w, color, top: true, left: true)),
-      Positioned(top: 12, right: 12, child: _corner(size, w, color, top: true, left: false)),
-      Positioned(bottom: 12, left: 12, child: _corner(size, w, color, top: false, left: true)),
-      Positioned(bottom: 12, right: 12, child: _corner(size, w, color, top: false, left: false)),
+      Positioned(
+        top: 12,
+        left: 12,
+        child: _corner(size, w, color, top: true, left: true),
+      ),
+      Positioned(
+        top: 12,
+        right: 12,
+        child: _corner(size, w, color, top: true, left: false),
+      ),
+      Positioned(
+        bottom: 12,
+        left: 12,
+        child: _corner(size, w, color, top: false, left: true),
+      ),
+      Positioned(
+        bottom: 12,
+        right: 12,
+        child: _corner(size, w, color, top: false, left: false),
+      ),
     ];
   }
 
-  Widget _corner(double size, double stroke, Color color, {required bool top, required bool left}) {
+  Widget _corner(
+    double size,
+    double stroke,
+    Color color, {
+    required bool top,
+    required bool left,
+  }) {
     return CustomPaint(
       size: Size(size, size),
-      painter: _CornerPainter(stroke: stroke, color: color, top: top, left: left),
+      painter: _CornerPainter(
+        stroke: stroke,
+        color: color,
+        top: top,
+        left: left,
+      ),
     );
   }
 }
 
 Future<FaceMeshInferencePipeline> _createPipeline(FaceMeshModel model) async {
   return FaceMeshInferencePipeline(
-    detector: await FaceDetectorProcessor.create(model: FaceDetectionModel.shortRange),
-    mesh: await FaceMeshProcessor.create(model: model, delegate: FaceMeshDelegate.xnnpack),
+    detector: await FaceDetectorProcessor.create(
+      model: FaceDetectionModel.shortRange,
+    ),
+    mesh: await FaceMeshProcessor.create(
+      model: model,
+      delegate: FaceMeshDelegate.xnnpack,
+    ),
   );
 }
 
@@ -813,11 +995,13 @@ class _FaceGuidePainter extends CustomPainter {
     canvas.drawOval(
       Rect.fromCenter(
         center: Offset(size.width / 2, size.height / 2 - 10),
-        width: size.width * 0.6, height: size.height * 0.62,
+        width: size.width * 0.6,
+        height: size.height * 0.62,
       ),
       paint,
     );
   }
+
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
@@ -827,19 +1011,42 @@ class _CornerPainter extends CustomPainter {
   final Color color;
   final bool top;
   final bool left;
-  const _CornerPainter({required this.stroke, required this.color, required this.top, required this.left});
+  const _CornerPainter({
+    required this.stroke,
+    required this.color,
+    required this.top,
+    required this.left,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = color..strokeWidth = stroke..style = PaintingStyle.stroke..strokeCap = StrokeCap.round;
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = stroke
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
     final p = Path();
     final s = size.width;
-    if (top && left) { p.moveTo(0, s); p.lineTo(0, 0); p.lineTo(s, 0); }
-    else if (top && !left) { p.moveTo(0, 0); p.lineTo(s, 0); p.lineTo(s, s); }
-    else if (!top && left) { p.moveTo(0, 0); p.lineTo(0, s); p.lineTo(s, s); }
-    else { p.moveTo(0, s); p.lineTo(s, s); p.lineTo(s, 0); }
+    if (top && left) {
+      p.moveTo(0, s);
+      p.lineTo(0, 0);
+      p.lineTo(s, 0);
+    } else if (top && !left) {
+      p.moveTo(0, 0);
+      p.lineTo(s, 0);
+      p.lineTo(s, s);
+    } else if (!top && left) {
+      p.moveTo(0, 0);
+      p.lineTo(0, s);
+      p.lineTo(s, s);
+    } else {
+      p.moveTo(0, s);
+      p.lineTo(s, s);
+      p.lineTo(s, 0);
+    }
     canvas.drawPath(p, paint);
   }
+
   @override
   bool shouldRepaint(covariant _CornerPainter old) => false;
 }

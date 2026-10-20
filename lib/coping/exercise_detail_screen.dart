@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
+import '../core/theme/app_text.dart';
 import 'coping_exercises.dart';
 import 'exercise_ui.dart';
 import 'exercise_session_screen.dart';
@@ -45,7 +46,7 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
           backgroundColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, size: 20),
+            icon: const Icon(Icons.arrow_back_rounded, size: 20),
             onPressed: () => Navigator.of(context).pop(),
           ),
           actions: [
@@ -74,12 +75,12 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
           ),
         ),
         body: ListView(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 28),
           children: [
             // Header
             Container(
-              padding: const EdgeInsets.all(22),
-              decoration: softCard(radius: 28),
+              padding: const EdgeInsets.all(24),
+              decoration: softCard(),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -115,46 +116,25 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
                     ],
                   ),
                   const SizedBox(height: 18),
-                  Text(
-                    ex.title,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      height: 1.2,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.sageDeep,
-                    ),
-                  ),
+                  Text(ex.title, style: AppText.displayMedium),
                   const SizedBox(height: 8),
-                  Text(
-                    ex.description,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      height: 1.5,
-                      color: AppColors.textMuted,
-                    ),
-                  ),
+                  Text(ex.description, style: AppText.bodyMedium),
                   const SizedBox(height: 18),
                   Row(
                     children: [
-                      Expanded(
-                        child: _Stat(
-                          icon: Icons.timer_outlined,
-                          label: '${ex.minutes} menit',
-                        ),
+                      _Stat(
+                        icon: Icons.timer_outlined,
+                        label: '${ex.minutes} menit',
                       ),
                       const SizedBox(width: 8),
-                      Expanded(
-                        child: _Stat(
-                          icon: Icons.touch_app_outlined,
-                          label: ex.kindLabel,
-                        ),
+                      _Stat(
+                        icon: Icons.touch_app_outlined,
+                        label: ex.kindLabel,
                       ),
                       const SizedBox(width: 8),
-                      Expanded(
-                        child: _Stat(
-                          icon: Icons.format_list_numbered,
-                          label: '${ex.steps.length} langkah',
-                        ),
+                      _Stat(
+                        icon: Icons.format_list_numbered,
+                        label: '${ex.steps.length} langkah',
                       ),
                     ],
                   ),
@@ -219,7 +199,7 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
             const SectionTitle('Langkah-langkah'),
             Container(
               padding: const EdgeInsets.fromLTRB(18, 18, 18, 4),
-              decoration: softCard(radius: 22),
+              decoration: softCard(),
               child: Column(
                 children: [
                   for (int i = 0; i < ex.steps.length; i++)
@@ -288,21 +268,21 @@ class _Stat extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
         decoration: BoxDecoration(
           color: AppColors.sagePale,
           borderRadius: BorderRadius.circular(14),
         ),
         child: Column(
           children: [
-            Icon(icon, size: 18, color: AppColors.sageDeep),
-            const SizedBox(height: 4),
+            Icon(icon, size: 20, color: AppColors.sageDeep),
+            const SizedBox(height: 6),
             Text(
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                fontSize: 11.5,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: AppColors.sageDeep,
               ),
