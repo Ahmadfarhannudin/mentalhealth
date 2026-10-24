@@ -35,27 +35,8 @@ class ProfileSheet extends StatefulWidget {
 class _ProfileSheetState extends State<ProfileSheet> {
   late final TextEditingController _nameController;
   String? _error;
-  int _activeSection = 0; // 0: Profil, 1: Preferensi, 2: Tentang
-
-  static const _tags = [
-    'Pekerjaan', 'Tidur', 'Keluarga',
-    'Kesehatan', 'Sosial', 'Hubungan',
-  ];
-
-  static const _prompts = [
-    ('Hari ini', 'Apa yang terasa berat, apa yang terasa ringan.'),
-    ('Perasaan', 'Perasaan apa yang muncul, dan apa yang memicu.'),
-    ('Syukur', 'Tiga hal kecil yang bisa disyukuri hari ini.'),
-    ('Pertumbuhan', 'Satu hal yang dipelajari tentang diri minggu ini.'),
-  ];
-
-  static const _moods = [
-    ('Tenang', AppColors.moodGreat),
-    ('Baik', AppColors.moodGood),
-    ('Biasa', AppColors.moodOkay),
-    ('Lelah', AppColors.moodLow),
-    ('Berat', AppColors.moodBad),
-  ];
+  bool _editingName = false;
+  int _activeSection = 0;
 
   @override
   void initState() {
@@ -94,7 +75,7 @@ class _ProfileSheetState extends State<ProfileSheet> {
           ),
           child: Column(
             children: [
-              // ── Handle ──
+              // Handle
               Padding(
                 padding: const EdgeInsets.only(top: 12),
                 child: Container(
@@ -107,37 +88,160 @@ class _ProfileSheetState extends State<ProfileSheet> {
                 ),
               ),
 
-              // ── Hero header ──
-              _ProfileHero(
-                controller: _nameController,
-                onSave: _save,
-                error: _error,
-                onNameChanged: () {
-                  if (_error != null) setState(() => _error = null);
-                },
+              // Header bar
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  Space.page, Space.md, Space.md, 0,
+                ),
+                child: Row(
+                  children: [
+                    Text('Akun', style: AppText.titleLarge),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Tutup'),
+                    ),
+                  ],
+                ),
               ),
 
-              // ── Tab bar ──
-              _SectionTabs(
-                active: _activeSection,
-                onChanged: (i) => setState(() => _activeSection = i),
-              ),
-
-              // ── Konten ──
               Expanded(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 220),
-                  child: _activeSection == 0
-                      ? _ProfileSection(
-                          tags: _tags,
-                          moods: _moods,
-                        )
-                      : _activeSection == 1
-                          ? _PreferencesSection(
-                              prompts: _prompts,
-                              exercises: copingExercises,
-                            )
-                          : const _AboutSection(),
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(
+                    Space.page, Space.lg, Space.page, Space.xxl,
+                  ),
+                  children: [
+                    // ── Hero profil ──
+                    _ProfileHeroCard(
+                      controller: _nameController,
+                      error: _error,
+                      editing: _editingName,
+                      onEditTap: () => setState(() {
+                        _editingName = !_editingName;
+                        _error = null;
+                      }),
+                      onNameChanged: () {
+                        if (_error != null) setState(() => _error = null);
+                      },
+                      onSave: _save,
+                    ),
+
+                    const SizedBox(height: Space.xl),
+
+                    // ── Pengaturan ──
+                    _SettingsGroup(
+                      title: 'Notifikasi',
+                      children: [
+                        _SwitchTile(
+                          icon: Icons.notifications_outlined,
+                          label: 'Pengingat check-in',
+                          subtitle: 'Ingatkan setiap hari untuk check-in',
+                          value: true,
+                          onChanged: (_) {},
+                        ),
+                        _SettingsDivider(),
+                        _SwitchTile(
+                          icon: Icons.bedtime_outlined,
+                          label: 'Refleksi malam',
+                          subtitle: 'Pengingat jurnal sebelum tidur',
+                          value: false,
+                          onChanged: (_) {},
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: Space.md),
+
+                    _SettingsGroup(
+                      title: 'Tampilan',
+                      children: [
+                        _SettingsTile(
+                          icon: Icons.palette_outlined,
+                          label: 'Tema',
+                          subtitle: 'Mengikuti sistem',
+                          onTap: () {},
+                        ),
+                        _SettingsDivider(),
+                        _SettingsTile(
+                          icon: Icons.text_fields_rounded,
+                          label: 'Ukuran teks',
+                          subtitle: 'Normal',
+                          onTap: () {},
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: Space.md),
+
+                    _SettingsGroup(
+                      title: 'Data & Privasi',
+                      children: [
+                        _SettingsTile(
+                          icon: Icons.download_outlined,
+                          label: 'Ekspor data',
+                          subtitle: 'Unduh semua catatan sebagai file',
+                          onTap: () {},
+                        ),
+                        _SettingsDivider(),
+                        _SettingsTile(
+                          icon: Icons.lock_outline_rounded,
+                          label: 'Kebijakan privasi',
+                          onTap: () {},
+                        ),
+                        _SettingsDivider(),
+                        _SettingsTile(
+                          icon: Icons.delete_outline_rounded,
+                          label: 'Hapus semua data',
+                          subtitle: 'Tindakan ini tidak bisa dibatalkan',
+                          destructive: true,
+                          onTap: () {},
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: Space.md),
+
+                    _SettingsGroup(
+                      title: 'Tentang',
+                      children: [
+                        _SettingsTile(
+                          icon: Icons.info_outline_rounded,
+                          label: 'Versi aplikasi',
+                          subtitle: '1.0.0',
+                        ),
+                        _SettingsDivider(),
+                        _SettingsTile(
+                          icon: Icons.star_outline_rounded,
+                          label: 'Beri ulasan',
+                          onTap: () {},
+                        ),
+                        _SettingsDivider(),
+                        _SettingsTile(
+                          icon: Icons.bug_report_outlined,
+                          label: 'Laporkan masalah',
+                          onTap: () {},
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: Space.xl),
+
+                    const InfoNote(
+                      icon: Icons.shield_outlined,
+                      message:
+                          'Semua catatan tersimpan hanya di perangkat ini. Tidak ada data yang dikirim ke server.',
+                    ),
+
+                    const SizedBox(height: Space.lg),
+                    Center(
+                      child: Text(
+                        'Tenang · v1.0.0',
+                        style: AppText.caption.copyWith(
+                          color: AppColors.textLight,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -149,28 +253,30 @@ class _ProfileSheetState extends State<ProfileSheet> {
 }
 
 // ─────────────────────────────────────────────
-// Hero header
+// Hero profil
 // ─────────────────────────────────────────────
 
-class _ProfileHero extends StatelessWidget {
+class _ProfileHeroCard extends StatelessWidget {
   final TextEditingController controller;
-  final VoidCallback onSave;
   final String? error;
+  final bool editing;
+  final VoidCallback onEditTap;
   final VoidCallback onNameChanged;
+  final VoidCallback onSave;
 
-  const _ProfileHero({
+  const _ProfileHeroCard({
     required this.controller,
-    required this.onSave,
     required this.error,
+    required this.editing,
+    required this.onEditTap,
     required this.onNameChanged,
+    required this.onSave,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(Space.page, Space.md, Space.page, 0),
-      padding: const EdgeInsets.all(Space.xl),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
@@ -208,9 +314,7 @@ class _ProfileHero extends StatelessWidget {
 
             // Highlight atas
             Positioned(
-              top: 0,
-              left: 16,
-              right: 16,
+              top: 0, left: 16, right: 16,
               child: Container(
                 height: 1.5,
                 decoration: BoxDecoration(
@@ -225,503 +329,212 @@ class _ProfileHero extends StatelessWidget {
               ),
             ),
 
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    // Avatar
-                    ValueListenableBuilder<TextEditingValue>(
-                      valueListenable: controller,
-                      builder: (context, value, _) {
-                        final letter = value.text.trim().isEmpty
-                            ? '?'
-                            : value.text
-                                .trim()
-                                .characters
-                                .first
-                                .toUpperCase();
-                        return Container(
-                          width: 62,
-                          height: 62,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: const Color(0xFFB7E4C7)
-                                .withValues(alpha: 0.20),
-                            border: Border.all(
-                              color: const Color(0xFFB7E4C7)
-                                  .withValues(alpha: 0.45),
-                              width: 1.5,
-                            ),
-                          ),
-                          child: Text(
-                            letter,
-                            style: AppText.displayLarge.copyWith(
-                              color: Colors.white,
-                              fontSize: 26,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(width: Space.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ValueListenableBuilder<TextEditingValue>(
-                            valueListenable: controller,
-                            builder: (context, value, _) => Text(
-                              value.text.trim().isEmpty
-                                  ? 'Nama kamu'
-                                  : value.text.trim(),
-                              style: AppText.titleLarge.copyWith(
-                                color: Colors.white,
-                                fontSize: 20,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
+            Padding(
+              padding: const EdgeInsets.all(Space.xl),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Avatar + info
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Avatar
+                      ValueListenableBuilder<TextEditingValue>(
+                        valueListenable: controller,
+                        builder: (context, value, _) {
+                          final letter = value.text.trim().isEmpty
+                              ? '?'
+                              : value.text
+                                  .trim()
+                                  .characters
+                                  .first
+                                  .toUpperCase();
+                          return Container(
+                            width: 68,
+                            height: 68,
+                            alignment: Alignment.center,
                             decoration: BoxDecoration(
+                              shape: BoxShape.circle,
                               color: const Color(0xFFB7E4C7)
                                   .withValues(alpha: 0.18),
-                              borderRadius: BorderRadius.circular(20),
                               border: Border.all(
                                 color: const Color(0xFFB7E4C7)
-                                    .withValues(alpha: 0.35),
+                                    .withValues(alpha: 0.45),
+                                width: 1.5,
                               ),
                             ),
                             child: Text(
-                              'Pengguna Tenang',
-                              style: AppText.caption.copyWith(
-                                color: const Color(0xFFD8F3DC),
-                                fontWeight: FontWeight.w500,
+                              letter,
+                              style: AppText.displayLarge.copyWith(
+                                color: Colors.white,
+                                fontSize: 28,
+                                height: 1,
                               ),
                             ),
-                          ),
-                        ],
+                          );
+                        },
                       ),
-                    ),
-                    // Tombol simpan
-                    GestureDetector(
-                      onTap: onSave,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFB7E4C7)
-                              .withValues(alpha: 0.20),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: const Color(0xFFB7E4C7)
-                                .withValues(alpha: 0.40),
-                          ),
-                        ),
-                        child: Text(
-                          'Simpan',
-                          style: AppText.caption.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: Space.lg),
 
-                // Field nama
-                TextField(
-                  controller: controller,
-                  textCapitalization: TextCapitalization.words,
-                  textInputAction: TextInputAction.done,
-                  onChanged: (_) => onNameChanged(),
-                  style: AppText.bodyMedium.copyWith(
-                    color: Colors.white,
-                  ),
-                  decoration: InputDecoration(
-                    labelText: 'Nama panggilan',
-                    labelStyle: TextStyle(
-                      color: const Color(0xFF95D5B2),
-                      fontSize: 13,
-                    ),
-                    hintText: 'Dipakai di sapaan check-in',
-                    hintStyle: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.35),
-                    ),
-                    errorText: error,
-                    filled: true,
-                    fillColor: const Color(0xFF74C69D)
-                        .withValues(alpha: 0.12),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(
-                        color: const Color(0xFFB7E4C7)
-                            .withValues(alpha: 0.30),
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(
-                        color: const Color(0xFFB7E4C7)
-                            .withValues(alpha: 0.70),
-                        width: 1.5,
-                      ),
-                    ),
-                    prefixIcon: Icon(
-                      Icons.person_outline_rounded,
-                      color: const Color(0xFF95D5B2),
-                      size: 20,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+                      const SizedBox(width: Space.lg),
 
-// ─────────────────────────────────────────────
-// Tab bar
-// ─────────────────────────────────────────────
-
-class _SectionTabs extends StatelessWidget {
-  final int active;
-  final ValueChanged<int> onChanged;
-
-  const _SectionTabs({required this.active, required this.onChanged});
-
-  static const _tabs = [
-    (Icons.person_outline_rounded, 'Profil'),
-    (Icons.tune_rounded, 'Preferensi'),
-    (Icons.info_outline_rounded, 'Tentang'),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(Space.page, Space.lg, Space.page, 0),
-      child: Container(
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceSunken,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: List.generate(_tabs.length, (i) {
-            final active = i == this.active;
-            return Expanded(
-              child: GestureDetector(
-                onTap: () => onChanged(i),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    color: active ? AppColors.surface : Colors.transparent,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: active
-                        ? [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.06),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
+                      // Nama + badge
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ValueListenableBuilder<TextEditingValue>(
+                              valueListenable: controller,
+                              builder: (context, value, _) => Text(
+                                value.text.trim().isEmpty
+                                    ? 'Nama kamu'
+                                    : value.text.trim(),
+                                style: AppText.titleLarge.copyWith(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  height: 1.1,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          ]
-                        : null,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        _tabs[i].$1,
-                        size: 18,
-                        color: active
-                            ? AppColors.forest
-                            : AppColors.textMuted,
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFB7E4C7)
+                                    .withValues(alpha: 0.18),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: const Color(0xFFB7E4C7)
+                                      .withValues(alpha: 0.35),
+                                ),
+                              ),
+                              child: Text(
+                                'Pengguna Tenang',
+                                style: AppText.caption.copyWith(
+                                  color: const Color(0xFFD8F3DC),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _tabs[i].$2,
-                        style: AppText.caption.copyWith(
-                          color: active
-                              ? AppColors.forestDeep
-                              : AppColors.textMuted,
-                          fontWeight: active
-                              ? FontWeight.w700
-                              : FontWeight.w500,
+
+                      // Tombol edit
+                      GestureDetector(
+                        onTap: onEditTap,
+                        child: Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFFB7E4C7)
+                                .withValues(alpha: 0.18),
+                            border: Border.all(
+                              color: const Color(0xFFB7E4C7)
+                                  .withValues(alpha: 0.35),
+                            ),
+                          ),
+                          child: Icon(
+                            editing
+                                ? Icons.close_rounded
+                                : Icons.edit_outlined,
+                            color: const Color(0xFFD8F3DC),
+                            size: 18,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
-              ),
-            );
-          }),
-        ),
-      ),
-    );
-  }
-}
 
-// ─────────────────────────────────────────────
-// Tab: Profil
-// ─────────────────────────────────────────────
-
-class _ProfileSection extends StatelessWidget {
-  final List<String> tags;
-  final List<(String, Color)> moods;
-
-  const _ProfileSection({required this.tags, required this.moods});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      key: const ValueKey('profil'),
-      padding: const EdgeInsets.fromLTRB(
-        Space.page, Space.lg, Space.page, Space.xxl,
-      ),
-      children: [
-        _SettingsGroup(
-          title: 'Skala mood',
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                Space.lg, Space.md, Space.lg, Space.lg,
-              ),
-              child: Wrap(
-                spacing: Space.sm,
-                runSpacing: Space.sm,
-                children: [
-                  for (final mood in moods)
-                    StatusChip(
-                      label: mood.$1,
-                      color: mood.$2,
-                      background: AppColors.surfaceAlt,
+                  // Form edit nama — muncul saat editing
+                  if (editing) ...[
+                    const SizedBox(height: Space.lg),
+                    TextField(
+                      controller: controller,
+                      autofocus: true,
+                      textCapitalization: TextCapitalization.words,
+                      textInputAction: TextInputAction.done,
+                      onChanged: (_) => onNameChanged(),
+                      onSubmitted: (_) => onSave(),
+                      style: AppText.bodyMedium.copyWith(
+                        color: Colors.white,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'Nama panggilan',
+                        labelStyle: TextStyle(
+                          color: const Color(0xFF95D5B2),
+                          fontSize: 13,
+                        ),
+                        hintText: 'Dipakai di sapaan check-in',
+                        hintStyle: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.35),
+                        ),
+                        errorText: error,
+                        filled: true,
+                        fillColor: const Color(0xFF74C69D)
+                            .withValues(alpha: 0.12),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide(
+                            color: const Color(0xFFB7E4C7)
+                                .withValues(alpha: 0.30),
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFB7E4C7),
+                            width: 1.5,
+                          ),
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.person_outline_rounded,
+                          color: Color(0xFF95D5B2),
+                          size: 20,
+                        ),
+                      ),
                     ),
+                    const SizedBox(height: Space.md),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: onSave,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFB7E4C7)
+                              .withValues(alpha: 0.25),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            side: BorderSide(
+                              color: const Color(0xFFB7E4C7)
+                                  .withValues(alpha: 0.40),
+                            ),
+                          ),
+                        ),
+                        child: const Text(
+                          'Simpan perubahan',
+                          style: TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
           ],
         ),
-        const SizedBox(height: Space.md),
-        _SettingsGroup(
-          title: 'Tag check-in',
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                Space.lg, Space.md, Space.lg, Space.lg,
-              ),
-              child: Wrap(
-                spacing: Space.sm,
-                runSpacing: Space.sm,
-                children: [
-                  for (final tag in tags) QuietPill(label: tag),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: Space.md),
-        _SettingsGroup(
-          title: 'Data',
-          children: [
-            _SettingsTile(
-              icon: Icons.download_outlined,
-              label: 'Ekspor data',
-              subtitle: 'Unduh semua catatan sebagai file',
-              onTap: () {},
-            ),
-            _SettingsDivider(),
-            _SettingsTile(
-              icon: Icons.delete_outline_rounded,
-              label: 'Hapus semua data',
-              subtitle: 'Tidak bisa dibatalkan',
-              destructive: true,
-              onTap: () {},
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-// ─────────────────────────────────────────────
-// Tab: Preferensi
-// ─────────────────────────────────────────────
-
-class _PreferencesSection extends StatefulWidget {
-  final List<(String, String)> prompts;
-  final List<CopingExercise> exercises;
-
-  const _PreferencesSection({
-    required this.prompts,
-    required this.exercises,
-  });
-
-  @override
-  State<_PreferencesSection> createState() => _PreferencesSectionState();
-}
-
-class _PreferencesSectionState extends State<_PreferencesSection> {
-  bool _notifEnabled = true;
-  bool _reminderEnabled = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      key: const ValueKey('preferensi'),
-      padding: const EdgeInsets.fromLTRB(
-        Space.page, Space.lg, Space.page, Space.xxl,
       ),
-      children: [
-        _SettingsGroup(
-          title: 'Notifikasi',
-          children: [
-            _SettingsTile(
-              icon: Icons.notifications_outlined,
-              label: 'Pengingat check-in',
-              subtitle: 'Ingatkan setiap hari',
-              trailing: Switch(
-                value: _notifEnabled,
-                onChanged: (v) => setState(() => _notifEnabled = v),
-                activeColor: AppColors.forest,
-              ),
-            ),
-            _SettingsDivider(),
-            _SettingsTile(
-              icon: Icons.bedtime_outlined,
-              label: 'Pengingat malam',
-              subtitle: 'Refleksi sebelum tidur',
-              trailing: Switch(
-                value: _reminderEnabled,
-                onChanged: (v) => setState(() => _reminderEnabled = v),
-                activeColor: AppColors.forest,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: Space.md),
-        _SettingsGroup(
-          title: 'Prompt jurnal',
-          children: [
-            for (int i = 0; i < widget.prompts.length; i++) ...[
-              _SettingsTile(
-                icon: Icons.edit_note_rounded,
-                label: widget.prompts[i].$1,
-                subtitle: widget.prompts[i].$2,
-              ),
-              if (i < widget.prompts.length - 1) _SettingsDivider(),
-            ],
-          ],
-        ),
-        const SizedBox(height: Space.md),
-        _SettingsGroup(
-          title: 'Latihan tersedia',
-          children: [
-            for (int i = 0; i < widget.exercises.length; i++) ...[
-              _SettingsTile(
-                icon: widget.exercises[i].icon,
-                label: widget.exercises[i].title,
-                subtitle:
-                    '${widget.exercises[i].category} · ${widget.exercises[i].minutes} menit',
-              ),
-              if (i < widget.exercises.length - 1) _SettingsDivider(),
-            ],
-          ],
-        ),
-      ],
     );
   }
 }
 
 // ─────────────────────────────────────────────
-// Tab: Tentang
-// ─────────────────────────────────────────────
-
-class _AboutSection extends StatelessWidget {
-  const _AboutSection();
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      key: const ValueKey('tentang'),
-      padding: const EdgeInsets.fromLTRB(
-        Space.page, Space.lg, Space.page, Space.xxl,
-      ),
-      children: [
-        _SettingsGroup(
-          title: 'Aplikasi',
-          children: [
-            _SettingsTile(
-              icon: Icons.info_outline_rounded,
-              label: 'Versi',
-              subtitle: '1.0.0',
-            ),
-            _SettingsDivider(),
-            _SettingsTile(
-              icon: Icons.article_outlined,
-              label: 'Kebijakan privasi',
-              onTap: () {},
-            ),
-            _SettingsDivider(),
-            _SettingsTile(
-              icon: Icons.description_outlined,
-              label: 'Syarat penggunaan',
-              onTap: () {},
-            ),
-          ],
-        ),
-        const SizedBox(height: Space.md),
-        _SettingsGroup(
-          title: 'Dukungan',
-          children: [
-            _SettingsTile(
-              icon: Icons.star_outline_rounded,
-              label: 'Beri ulasan',
-              onTap: () {},
-            ),
-            _SettingsDivider(),
-            _SettingsTile(
-              icon: Icons.bug_report_outlined,
-              label: 'Laporkan masalah',
-              onTap: () {},
-            ),
-          ],
-        ),
-        const SizedBox(height: Space.xl),
-        const InfoNote(
-          icon: Icons.lock_outline_rounded,
-          message:
-              'Catatan check-in, jurnal, dan obrolan dengan Teman tetap di perangkat ini. Tidak ada data yang dikirim ke server.',
-        ),
-        const SizedBox(height: Space.lg),
-        Center(
-          child: Text(
-            'Dibuat dengan ❤️ untuk kesehatan mental',
-            style: AppText.caption.copyWith(color: AppColors.textLight),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ─────────────────────────────────────────────
-// Komponen settings reusable
+// Komponen settings
 // ─────────────────────────────────────────────
 
 class _SettingsGroup extends StatelessWidget {
@@ -774,8 +587,12 @@ class _SettingsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = destructive ? AppColors.moodBad : AppColors.forest;
-    final textColor = destructive ? AppColors.moodBad : AppColors.textDark;
+    final iconColor = destructive ? AppColors.moodBad : AppColors.forest;
+    final iconBg = destructive
+        ? AppColors.moodBadTint
+        : AppColors.forestMist;
+    final labelColor =
+        destructive ? AppColors.moodBad : AppColors.textDark;
 
     return Material(
       color: Colors.transparent,
@@ -790,15 +607,13 @@ class _SettingsTile extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
-                  color: destructive
-                      ? AppColors.moodBadTint
-                      : AppColors.forestMist,
-                  borderRadius: BorderRadius.circular(10),
+                  color: iconBg,
+                  borderRadius: BorderRadius.circular(11),
                 ),
-                child: Icon(icon, size: 18, color: color),
+                child: Icon(icon, size: 19, color: iconColor),
               ),
               const SizedBox(width: Space.md),
               Expanded(
@@ -807,11 +622,18 @@ class _SettingsTile extends StatelessWidget {
                   children: [
                     Text(
                       label,
-                      style: AppText.bodyMedium.copyWith(color: textColor),
+                      style: AppText.bodyMedium.copyWith(
+                        color: labelColor,
+                      ),
                     ),
                     if (subtitle != null) ...[
                       const SizedBox(height: 2),
-                      Text(subtitle!, style: AppText.caption),
+                      Text(
+                        subtitle!,
+                        style: AppText.caption.copyWith(
+                          color: AppColors.textMuted,
+                        ),
+                      ),
                     ],
                   ],
                 ),
@@ -832,9 +654,55 @@ class _SettingsTile extends StatelessWidget {
   }
 }
 
+class _SwitchTile extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final String? subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _SwitchTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onChanged,
+    this.subtitle,
+  });
+
+  @override
+  State<_SwitchTile> createState() => _SwitchTileState();
+}
+
+class _SwitchTileState extends State<_SwitchTile> {
+  late bool _value;
+
+  @override
+  void initState() {
+    super.initState();
+    _value = widget.value;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _SettingsTile(
+      icon: widget.icon,
+      label: widget.label,
+      subtitle: widget.subtitle,
+      trailing: Switch(
+        value: _value,
+        onChanged: (v) {
+          setState(() => _value = v);
+          widget.onChanged(v);
+        },
+        activeColor: AppColors.forest,
+      ),
+    );
+  }
+}
+
 class _SettingsDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return const Divider(height: 1, indent: 68, endIndent: Space.lg);
+    return const Divider(height: 1, indent: 66, endIndent: Space.lg);
   }
 }
