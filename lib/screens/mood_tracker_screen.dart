@@ -2008,8 +2008,10 @@ class _TrendPainter extends CustomPainter {
       canvas.drawCircle(last, 4.5, Paint()..color = c);
     }
 
-    // Label X
-    for (var i = 0; i < n; i++) {
+    // Label X tetap di titiknya. Yang tidak muat di tepi kanan
+    // dijepit ke tepi, bukan digeser menimpa label di sebelahnya.
+    double occupiedLeft = size.width;
+    for (var i = n - 1; i >= 0; i--) {
       if (xLabels[i].isEmpty) continue;
       final isLast = i == n - 1;
       final tp = _tp(
@@ -2020,8 +2022,12 @@ class _TrendPainter extends CustomPainter {
           color: isLast ? AppColors.forestDeep : AppColors.textMuted,
         ),
       );
-      final dx = (xAt(i) - tp.width / 2).clamp(0.0, size.width - tp.width);
+      var dx = xAt(i) - tp.width / 2;
+      if (dx + tp.width > size.width) dx = size.width - tp.width;
+      if (dx < 0) dx = 0;
+      if (dx + tp.width > occupiedLeft - 6) continue;
       tp.paint(canvas, Offset(dx, plot.bottom + 8));
+      occupiedLeft = dx;
     }
 
     // Crosshair + tooltip
