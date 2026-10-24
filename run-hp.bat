@@ -6,16 +6,11 @@ echo Menjalankan aplikasi Mental Health ke HP Infinix...
 
 adb start-server >nul 2>&1
 set "DEVICE="
-set "ADDRESS="
 
-rem ADB wireless address may change after reboot; resolve the saved device via mDNS.
+rem mDNS can expose duplicate services with different ports. Try every endpoint.
 for /f "tokens=1,3" %%A in ('adb mdns services 2^>nul ^| findstr /C:"adb-133157048X014915-PE8A2C"') do (
-    set "ADDRESS=%%B"
-)
-
-if defined ADDRESS (
-    echo Menyambungkan ulang ke HP: !ADDRESS!
-    adb connect !ADDRESS!
+    echo Menyambungkan ulang ke HP: %%B
+    adb connect %%B >nul 2>&1
 )
 
 rem Connected wireless devices use IP:port serials, not the mDNS service name.

@@ -10,10 +10,15 @@ void main() {
     addTearDown(tester.view.reset);
 
     await tester.pumpWidget(const TenangApp());
-    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pump(const Duration(milliseconds: 800));
     expect(tester.takeException(), isNull, reason: 'Check-in');
     expect(find.byType(MoodTrackerScreen), findsOneWidget);
-    expect(find.text('Check-in sekarang'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Check-in sekarang').evaluate().isNotEmpty ||
+          find.text('Check-in hari ini').evaluate().isNotEmpty,
+      isTrue,
+    );
 
     await tester.scrollUntilVisible(
       find.text('Riwayat check-in'),

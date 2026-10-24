@@ -7,6 +7,7 @@ import 'chat_ai_screen.dart';
 import 'cbt_exercises_screen.dart';
 import 'journal_screen.dart';
 import 'mood_tracker_screen.dart';
+import 'profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String userName;
@@ -19,10 +20,13 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+  late String _userName = widget.userName;
 
-  late final List<Widget> _screens = [
+  late List<Widget> _screens = _buildScreens();
+
+  List<Widget> _buildScreens() => [
     MoodTrackerScreen(
-      userName: widget.userName,
+      userName: _userName,
       onTabChanged: (index) {
         if (index >= 0 && index < 4) {
           setState(() => _selectedIndex = index);
@@ -34,6 +38,18 @@ class _HomeScreenState extends State<HomeScreen> {
     const ChatAiScreen(),
   ];
 
+  Future<void> _openProfile() async {
+    final draft = await ProfileSheet.show(context, name: _userName);
+    if (!mounted || draft == null || draft.name == _userName) return;
+    setState(() {
+      _userName = draft.name;
+      _screens = _buildScreens();
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Profil tersimpan. Sapaan sekarang: ${draft.name}.')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -42,7 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
         bottom: false,
         child: Column(
           children: [
-            const _Header(),
+            _Header(name: _userName, onProfile: _openProfile),
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
@@ -74,7 +90,10 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header();
+  final String name;
+  final VoidCallback onProfile;
+
+  const _Header({required this.name, required this.onProfile});
 
   @override
   Widget build(BuildContext context) {
@@ -115,7 +134,47 @@ class _Header extends StatelessWidget {
                   ],
                 ),
               ),
+              const SizedBox(width: Space.sm),
+              _ProfileButton(name: name, onPressed: onProfile),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileButton extends StatelessWidget {
+  final String name;
+  final VoidCallback onPressed;
+
+  const _ProfileButton({required this.name, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    final trimmed = name.trim();
+    final letter = trimmed.isEmpty ? '?' : trimmed.characters.first.toUpperCase();
+
+    return Semantics(
+      button: true,
+      label: 'Buka profil',
+      child: Material(
+        key: const Key('profileButton'),
+        color: AppColors.forestPale,
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onPressed,
+          customBorder: const CircleBorder(),
+          child: SizedBox(
+            width: 44,
+            height: 44,
+            child: Center(
+              child: Text(
+                letter,
+                style: AppText.titleSmall.copyWith(color: AppColors.forestDeep),
+              ),
+            ),
           ),
         ),
       ),
